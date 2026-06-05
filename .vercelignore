@@ -1,0 +1,6 @@
+.env
+.env.*
+.data
+.next
+.figma-ref
+lib/generated
