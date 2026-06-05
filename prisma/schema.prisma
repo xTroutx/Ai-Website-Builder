@@ -26,6 +26,8 @@ model User {
   name         String?
   /// bcrypt hash of the password (email+password auth via Auth.js Credentials).
   passwordHash String?
+  /// When the captain completed the onboarding wizard (null = not yet).
+  onboardedAt  DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

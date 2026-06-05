@@ -61,9 +61,10 @@ export async function signUp(
   const slug = await uniqueSlug(businessName ?? email.split("@")[0]);
   await createSiteForOwner(user.id, { slug, businessName });
 
-  // signIn throws a redirect (to /editor) on success — let it propagate.
+  // New accounts go through the onboarding wizard. signIn throws a redirect on
+  // success — let it propagate.
   try {
-    await signIn("credentials", { email, password, redirectTo: "/dashboard" });
+    await signIn("credentials", { email, password, redirectTo: "/onboarding" });
   } catch (error) {
     if (error instanceof AuthError) return { error: "Could not sign in." };
     throw error;

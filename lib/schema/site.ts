@@ -1,5 +1,7 @@
 import { z } from "zod";
-import { THEME_IDS } from "../theme/registry";
+import { PALETTE_IDS } from "../theme/palettes";
+import { FONT_IDS } from "../theme/font-pairings";
+import { TEMPLATE_IDS } from "../theme/templates";
 import {
   AddressSchema,
   GeoSchema,
@@ -75,13 +77,20 @@ export const SiteSchema = z
       ),
     /** Absolute base URL, used for canonical URLs, sitemap, and OG tags. */
     baseUrl: z.url(),
-    /** Selected theme. Must be one of the curated registry ids. */
-    themeId: z.string().refine(
-      (id): boolean => (THEME_IDS as readonly string[]).includes(id),
-      {
-        message:
-          "Unknown themeId — must be one of the curated themes in /lib/theme.",
-      },
+    /** Layout/design template (curated). */
+    templateId: z.string().refine(
+      (id): boolean => (TEMPLATE_IDS as readonly string[]).includes(id),
+      { message: "Unknown templateId — must be a curated template." },
+    ),
+    /** Color palette (curated). The color half of the customizer. */
+    paletteId: z.string().refine(
+      (id): boolean => (PALETTE_IDS as readonly string[]).includes(id),
+      { message: "Unknown paletteId — must be a curated palette." },
+    ),
+    /** Font pairing (curated). The typography half of the customizer. */
+    fontId: z.string().refine(
+      (id): boolean => (FONT_IDS as readonly string[]).includes(id),
+      { message: "Unknown fontId — must be a curated font pairing." },
     ),
     profile: BusinessProfileSchema,
     /** Header navigation. Order is captain-editable. */

@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { getSiteSummary } from "@/lib/site";
 import { togglePublish } from "@/lib/dashboard-actions";
-import { getTheme } from "@/lib/theme";
+import { getTemplate, getPalette, getFontPairing } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const s = await getSiteSummary();
-  const theme = getTheme(s.themeId);
+  const template = getTemplate(s.templateId);
+  const palette = getPalette(s.paletteId);
+  const font = getFontPairing(s.fontId);
 
   return (
     <div className="flex flex-col gap-6">
@@ -26,8 +28,12 @@ export default async function DashboardPage() {
             </div>
             <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-1 text-sm text-zinc-600">
               <div>
-                <dt className="inline text-zinc-400">Theme: </dt>
-                <dd className="inline font-medium">{theme.name}</dd>
+                <dt className="inline text-zinc-400">Template: </dt>
+                <dd className="inline font-medium">{template.name}</dd>
+              </div>
+              <div>
+                <dt className="inline text-zinc-400">Style: </dt>
+                <dd className="inline font-medium">{palette.name} · {font.name}</dd>
               </div>
               <div>
                 <dt className="inline text-zinc-400">Pages: </dt>

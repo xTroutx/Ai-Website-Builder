@@ -32,11 +32,11 @@ async function main() {
 
   await prisma.site.upsert({
     where: { slug: site.slug },
-    update: { name: site.profile.name, themeId: site.themeId, data, ownerId: owner.id },
+    update: { name: site.profile.name, themeId: site.paletteId, data, ownerId: owner.id },
     create: {
       slug: site.slug,
       name: site.profile.name,
-      themeId: site.themeId,
+      themeId: site.paletteId,
       data,
       ownerId: owner.id,
     },

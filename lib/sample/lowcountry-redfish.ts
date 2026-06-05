@@ -15,7 +15,9 @@ import type { SiteInput } from "../schema";
 export const lowcountryRedfish: SiteInput = {
   slug: "lowcountry-redfish",
   baseUrl: "https://lowcountry-redfish.fishysites.com",
-  themeId: "crystal-coast",
+  templateId: "coastal",
+  paletteId: "crystal-coast",
+  fontId: "antonio-barlow",
   profile: {
     name: "Lowcountry Redfish Charters",
     tagline: "Sight-fishing the Charleston flats since 2009",

@@ -1,7 +1,26 @@
+export { appearanceToCssVars, type Appearance } from "./registry";
 export {
-  THEMES,
-  THEME_IDS,
-  getTheme,
-  themeToCssVars,
-} from "./registry";
-export type { Theme, ThemeId, ThemeTokens } from "./registry";
+  PALETTES,
+  PALETTE_IDS,
+  DEFAULT_PALETTE_ID,
+  getPalette,
+  type Palette,
+  type PaletteId,
+} from "./palettes";
+export {
+  FONT_PAIRINGS,
+  FONT_IDS,
+  DEFAULT_FONT_ID,
+  getFontPairing,
+  type FontPairing,
+  type FontId,
+} from "./font-pairings";
+export {
+  TEMPLATES,
+  TEMPLATE_IDS,
+  DEFAULT_TEMPLATE_ID,
+  getTemplate,
+  type Template,
+  type TemplateId,
+} from "./templates";
+export { fontVariables } from "./fonts";

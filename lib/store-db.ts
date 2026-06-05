@@ -32,7 +32,7 @@ export async function writeSiteBySlug(site: Site): Promise<void> {
     data: {
       data: asJson(valid),
       name: valid.profile.name,
-      themeId: valid.themeId,
+      themeId: valid.paletteId,
     },
   });
 }
@@ -41,7 +41,9 @@ export async function writeSiteBySlug(site: Site): Promise<void> {
 export async function getSiteSummaryForOwner(ownerId: string): Promise<{
   slug: string;
   name: string;
-  themeId: string;
+  templateId: string;
+  paletteId: string;
+  fontId: string;
   published: boolean;
   pageCount: number;
   profileName: string;
@@ -55,7 +57,9 @@ export async function getSiteSummaryForOwner(ownerId: string): Promise<{
   return {
     slug: row.slug,
     name: row.name,
-    themeId: row.themeId,
+    templateId: site.templateId,
+    paletteId: site.paletteId,
+    fontId: site.fontId,
     published: row.published,
     pageCount: site.pages.length,
     profileName: site.profile.name,
@@ -100,7 +104,7 @@ export async function createSiteForOwner(
     data: {
       slug: valid.slug,
       name: valid.profile.name,
-      themeId: valid.themeId,
+      themeId: valid.paletteId,
       data: asJson(valid),
       ownerId,
     },

@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import type { Site, SocialLink } from "@/lib/schema";
 import { getPagesOfType } from "@/lib/schema";
-import { getTheme, themeToCssVars } from "@/lib/theme";
+import { appearanceToCssVars } from "@/lib/theme";
 import { Editable, editPath } from "@/components/primitives/Editable";
 import { Container } from "@/components/primitives/ui";
 
@@ -20,8 +20,11 @@ export function SiteShell({
   site: Site;
   children: ReactNode;
 }) {
-  const theme = getTheme(site.themeId);
-  const vars = themeToCssVars(theme);
+  const vars = appearanceToCssVars({
+    paletteId: site.paletteId,
+    fontId: site.fontId,
+    templateId: site.templateId,
+  });
 
   return (
     <div style={vars} className="flex min-h-screen flex-col bg-bg font-body text-ink">
