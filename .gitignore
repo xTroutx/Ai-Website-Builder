@@ -49,3 +49,5 @@ next-env.d.ts
 
 # builder working data (file-backed Site JSON store)
 /.data
+
+.vercel
