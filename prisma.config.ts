@@ -1,19 +1,22 @@
 import "dotenv/config";
-import { defineConfig, env } from "prisma/config";
+import { defineConfig } from "prisma/config";
 
 /**
  * Prisma 7 configuration. The datasource URL lives here (no longer in
- * schema.prisma) and is read from DATABASE_URL. Used by migration/introspection
- * commands; the runtime client connects via a driver adapter instead.
+ * schema.prisma). Migration/introspection commands need a real DATABASE_URL;
+ * the runtime client connects via a driver adapter (lib/db.ts).
  *
- * No live database is required this session — the renderer reads the in-code
- * sample. When wiring persistence: set DATABASE_URL, run `prisma migrate dev`,
- * then seed.
+ * We read process.env directly (not the throwing `env()` helper) with a harmless
+ * placeholder fallback, so `prisma generate` works even when DATABASE_URL is
+ * unset (local dev runs the file store until Neon is configured). Migrate/seed
+ * still require a real DATABASE_URL.
  */
 export default defineConfig({
   schema: "prisma/schema.prisma",
   datasource: {
-    url: env("DATABASE_URL"),
+    url:
+      process.env.DATABASE_URL ??
+      "postgresql://placeholder:placeholder@localhost:5432/placeholder",
   },
   migrations: {
     seed: "tsx prisma/seed.ts",
