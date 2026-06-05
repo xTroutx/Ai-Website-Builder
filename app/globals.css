@@ -1,26 +1,59 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/**
+ * Design tokens.
+ *
+ * The `--t-*` custom properties are set at runtime by the active theme (see
+ * lib/theme/registry.ts -> themeToCssVars, applied on <SiteShell>). Here we map
+ * them to Tailwind's theme so utilities like `bg-primary`, `text-ink`,
+ * `font-heading`, and `rounded-theme` resolve to the active theme — with sane
+ * fallbacks for any UI rendered outside a themed shell (e.g. the dev index).
+ *
+ * Templates must ONLY use these token-backed utilities for color/typography.
+ * They never hardcode hex values — all palette/font control lives in the theme.
+ */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--t-bg, #ffffff);
+  --color-surface: var(--t-surface, #f7f7f8);
+  --color-ink: var(--t-text, #16181d);
+  --color-muted: var(--t-muted, #5b6270);
+  --color-primary: var(--t-primary, #1f6feb);
+  --color-on-primary: var(--t-primary-contrast, #ffffff);
+  --color-accent: var(--t-accent, #e0a93b);
+  --color-line: var(--t-border, #e4e7ec);
+  --color-band: var(--t-surface-alt, #f2ede1);
+  --color-on-band: var(--t-on-surface-alt, #16181d);
+
+  --font-heading: var(--t-font-heading, ui-sans-serif, system-ui, sans-serif);
+  --font-body: var(--t-font-body, ui-sans-serif, system-ui, sans-serif);
+
+  --radius-theme: var(--t-radius, 0.5rem);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
+}
+
+/**
+ * Click-to-edit affordances. Inert until an ancestor gets `.fs-editmode` (added
+ * later by the editor shell). Every editable element already carries a
+ * `data-edit="<json.path>"` attribute today, so the editor can wire up without
+ * touching templates. Structural/locked elements carry `data-locked`.
+ */
+.fs-editmode [data-edit] {
+  cursor: pointer;
+  transition: outline-color 120ms ease;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.fs-editmode [data-edit]:hover {
+  outline-color: var(--color-accent);
+}
+.fs-editmode [data-locked] {
+  cursor: not-allowed;
 }

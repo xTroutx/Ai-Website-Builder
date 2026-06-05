@@ -1,0 +1,270 @@
+import { z } from "zod";
+import { CtaSchema, MediaSchema, SlugSchema } from "./primitives";
+
+/**
+ * Sections are the composable content blocks that make up a page body. Each is a
+ * discriminated-union member keyed by `type`, so templates can switch on `type`
+ * exhaustively and TypeScript guarantees every case is handled.
+ *
+ * Captains control WHICH sections appear and their ORDER (array order), and the
+ * content inside them. They do NOT control how a section looks — that's the
+ * template's job. Adding a new section type = add a member here + a case in the
+ * section renderer.
+ *
+ * Fields common to every section (id, hidden) are spread into each member so the
+ * discriminated union stays flat (z.discriminatedUnion requires a literal
+ * `type` key on each option).
+ */
+
+const base = {
+  /** Stable id, unique within a page. Used for React keys and data-edit paths. */
+  id: z.string().min(1),
+  /** Keep the section in the JSON but don't render it. */
+  hidden: z.boolean().default(false),
+};
+
+/** Big top-of-page banner: headline, supporting copy, CTAs, and a hero image. */
+export const HeroSectionSchema = z.object({
+  ...base,
+  type: z.literal("hero"),
+  eyebrow: z.string().optional(),
+  headline: z.string().min(1),
+  subheadline: z.string().optional(),
+  media: MediaSchema.optional(),
+  primaryCta: CtaSchema.optional(),
+  secondaryCta: CtaSchema.optional(),
+});
+
+/**
+ * An image paired with a heading + body copy (and optional CTA), side by side.
+ * The recurring "image + text" block in the design (intro, meet-the-captain).
+ */
+export const MediaTextSectionSchema = z.object({
+  ...base,
+  type: z.literal("mediaText"),
+  eyebrow: z.string().optional(),
+  heading: z.string().min(1),
+  /** Each string is a paragraph. */
+  body: z.array(z.string().min(1)).min(1),
+  media: MediaSchema,
+  /** Which side the image sits on (a curated layout option, not free design). */
+  mediaSide: z.enum(["left", "right"]).default("left"),
+  /** Band treatment: the page color, or the contrasting light "band" color. */
+  tone: z.enum(["dark", "light"]).default("dark"),
+  cta: CtaSchema.optional(),
+});
+
+/** A heading plus one or more paragraphs of prose. */
+export const RichTextSectionSchema = z.object({
+  ...base,
+  type: z.literal("richText"),
+  heading: z.string().optional(),
+  /** Each string is a paragraph. */
+  body: z.array(z.string().min(1)).min(1),
+});
+
+/** Grid of short feature/benefit blurbs. */
+export const FeatureGridSectionSchema = z.object({
+  ...base,
+  type: z.literal("featureGrid"),
+  heading: z.string().optional(),
+  items: z
+    .array(
+      z.object({
+        title: z.string().min(1),
+        body: z.string().min(1),
+        /** Optional short icon key/emoji — purely decorative content. */
+        icon: z.string().optional(),
+      }),
+    )
+    .min(1),
+});
+
+/** Cards promoting trips, each optionally linking to its trip page. */
+export const TripCardsSectionSchema = z.object({
+  ...base,
+  type: z.literal("tripCards"),
+  heading: z.string().optional(),
+  trips: z
+    .array(
+      z.object({
+        title: z.string().min(1),
+        summary: z.string().min(1),
+        /** Slug of the trip page to link to, when one exists. */
+        slug: SlugSchema.optional(),
+        priceFrom: z.number().nonnegative().optional(),
+        duration: z.string().optional(),
+        media: MediaSchema.optional(),
+      }),
+    )
+    .min(1),
+});
+
+/** Cards highlighting target species, each optionally linking to its page. */
+export const SpeciesCardsSectionSchema = z.object({
+  ...base,
+  type: z.literal("speciesCards"),
+  heading: z.string().optional(),
+  species: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        blurb: z.string().min(1),
+        slug: SlugSchema.optional(),
+        /** Best months, e.g. "Apr–Oct". */
+        season: z.string().optional(),
+        media: MediaSchema.optional(),
+      }),
+    )
+    .min(1),
+});
+
+/** Pricing tiers for trips/packages. */
+export const PricingTableSectionSchema = z.object({
+  ...base,
+  type: z.literal("pricingTable"),
+  heading: z.string().optional(),
+  tiers: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        price: z.number().nonnegative(),
+        /** e.g. "per trip", "per person", "half day". */
+        unit: z.string().optional(),
+        description: z.string().optional(),
+        features: z.array(z.string().min(1)).default([]),
+        /** Mark one tier as the recommended/featured option. */
+        featured: z.boolean().default(false),
+        cta: CtaSchema.optional(),
+      }),
+    )
+    .min(1),
+});
+
+/** Photo gallery. */
+export const GallerySectionSchema = z.object({
+  ...base,
+  type: z.literal("gallery"),
+  heading: z.string().optional(),
+  images: z.array(MediaSchema).min(1),
+});
+
+/** Customer testimonials / reviews. */
+export const TestimonialsSectionSchema = z.object({
+  ...base,
+  type: z.literal("testimonials"),
+  heading: z.string().optional(),
+  items: z
+    .array(
+      z.object({
+        quote: z.string().min(1),
+        author: z.string().min(1),
+        location: z.string().optional(),
+        /** 1–5 star rating. */
+        rating: z.number().int().min(1).max(5).optional(),
+      }),
+    )
+    .min(1),
+});
+
+/** Frequently asked questions. Also the source for FAQPage JSON-LD. */
+export const FaqSectionSchema = z.object({
+  ...base,
+  type: z.literal("faq"),
+  heading: z.string().optional(),
+  items: z
+    .array(
+      z.object({
+        question: z.string().min(1),
+        answer: z.string().min(1),
+      }),
+    )
+    .min(1),
+});
+
+/** Label/value rows — trip specs, what's included, quick facts. */
+export const InfoListSectionSchema = z.object({
+  ...base,
+  type: z.literal("infoList"),
+  heading: z.string().optional(),
+  items: z
+    .array(
+      z.object({
+        label: z.string().min(1),
+        value: z.string().min(1),
+      }),
+    )
+    .min(1),
+});
+
+/** Headline statistics (years guiding, trips run, etc.). */
+export const StatsSectionSchema = z.object({
+  ...base,
+  type: z.literal("stats"),
+  heading: z.string().optional(),
+  items: z
+    .array(
+      z.object({
+        value: z.string().min(1),
+        label: z.string().min(1),
+      }),
+    )
+    .min(1),
+});
+
+/** Full-width call-to-action banner. */
+export const CtaBannerSectionSchema = z.object({
+  ...base,
+  type: z.literal("ctaBanner"),
+  heading: z.string().min(1),
+  body: z.string().optional(),
+  cta: CtaSchema,
+});
+
+/** Contact details and an optional lead form. */
+export const ContactSectionSchema = z.object({
+  ...base,
+  type: z.literal("contact"),
+  heading: z.string().optional(),
+  body: z.string().optional(),
+  /** Pull phone/email/address from the business profile when true. */
+  showBusinessDetails: z.boolean().default(true),
+  /** Render the lead-capture form (writes to the `leads` table later). */
+  showLeadForm: z.boolean().default(true),
+});
+
+/** Long-form article body for fishing reports. Source for Article JSON-LD. */
+export const ArticleBodySectionSchema = z.object({
+  ...base,
+  type: z.literal("articleBody"),
+  /** Each string is a paragraph. */
+  body: z.array(z.string().min(1)).min(1),
+  /** Optional highlighted pull quote. */
+  pullQuote: z.string().optional(),
+});
+
+/**
+ * The Section discriminated union. Order of members doesn't matter; the `type`
+ * literal is the discriminant.
+ */
+export const SectionSchema = z.discriminatedUnion("type", [
+  HeroSectionSchema,
+  MediaTextSectionSchema,
+  RichTextSectionSchema,
+  FeatureGridSectionSchema,
+  TripCardsSectionSchema,
+  SpeciesCardsSectionSchema,
+  PricingTableSectionSchema,
+  GallerySectionSchema,
+  TestimonialsSectionSchema,
+  FaqSectionSchema,
+  InfoListSectionSchema,
+  StatsSectionSchema,
+  CtaBannerSectionSchema,
+  ContactSectionSchema,
+  ArticleBodySectionSchema,
+]);
+
+export type Section = z.infer<typeof SectionSchema>;
+/** The literal `type` of any section. */
+export type SectionType = Section["type"];

@@ -1,0 +1,70 @@
+// FishySites database schema — intentionally thin for now.
+//
+// The Site JSON (validated by /lib/schema) is the source of truth for content
+// and is stored verbatim in `Site.data`. On read we parseSite() it through Zod,
+// the same boundary the in-code sample crosses today (see lib/site.ts). Auth,
+// billing, and domains are out of scope this session.
+//
+// Prisma 7 uses the `prisma-client` generator with an explicit output path.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+// Prisma 7: the connection URL lives in prisma.config.ts, not here. The runtime
+// client connects via a driver adapter (e.g. @prisma/adapter-pg) passed to the
+// PrismaClient constructor — wired up when we add live persistence.
+datasource db {
+  provider = "postgresql"
+}
+
+/// An account that owns one or more sites.
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sites Site[]
+}
+
+/// A captain's website. `data` holds the full, Zod-validated Site JSON.
+model Site {
+  id        String   @id @default(cuid())
+  /// Tenant slug used for subdomain resolution later (slug.fishysites.com).
+  slug      String   @unique
+  /// Denormalized business name for quick listing/admin without parsing JSON.
+  name      String
+  /// Selected curated theme id (mirrors data.themeId for indexing/filtering).
+  themeId   String
+  /// The complete Site JSON document — the content source of truth.
+  data      Json
+  published Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  leads Lead[]
+
+  @@index([ownerId])
+}
+
+/// A booking inquiry captured from a site's contact form.
+model Lead {
+  id             String   @id @default(cuid())
+  name           String
+  email          String
+  phone          String?
+  preferredDates String?
+  message        String?
+  createdAt      DateTime @default(now())
+
+  siteId String
+  site   Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([siteId])
+}

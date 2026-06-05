@@ -1,17 +1,20 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { getSite } from "@/lib/site";
-import { getHomePage } from "@/lib/schema";
+import { getSingletonPage } from "@/lib/schema";
 import { buildMetadata, JsonLd } from "@/lib/seo";
 import { PageRenderer } from "@/components/templates/PageRenderer";
 
 export async function generateMetadata(): Promise<Metadata> {
   const site = await getSite();
-  return buildMetadata(site, getHomePage(site));
+  const page = getSingletonPage(site, "about");
+  return page ? buildMetadata(site, page) : {};
 }
 
-export default async function HomeRoute() {
+export default async function AboutRoute() {
   const site = await getSite();
-  const page = getHomePage(site);
+  const page = getSingletonPage(site, "about");
+  if (!page) notFound();
   return (
     <>
       <JsonLd site={site} page={page} />

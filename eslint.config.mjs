@@ -12,7 +12,19 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Prisma-generated client — not hand-edited, don't lint.
+    "lib/generated/**",
   ]),
+  {
+    rules: {
+      // Allow intentionally-unused args/vars prefixed with underscore
+      // (e.g. forward-looking params like getSite(_slug)).
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;
