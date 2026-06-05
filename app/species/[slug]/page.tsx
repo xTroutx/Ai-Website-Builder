@@ -1,16 +1,14 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getSite } from "@/lib/site";
-import { getPageByTypeAndSlug, getPagesOfType } from "@/lib/schema";
+import { getPageByTypeAndSlug } from "@/lib/schema";
 import { buildMetadata, JsonLd } from "@/lib/seo";
 import { PageRenderer } from "@/components/templates/PageRenderer";
 
-type Params = { params: Promise<{ slug: string }> };
+// Per-account site is resolved from the session, so render on demand.
+export const dynamic = "force-dynamic";
 
-export async function generateStaticParams() {
-  const site = await getSite();
-  return getPagesOfType(site, "species").map((p) => ({ slug: p.slug }));
-}
+type Params = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;

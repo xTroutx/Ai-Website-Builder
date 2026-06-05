@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { getSite } from "@/lib/site";
-import { writeSite } from "@/lib/store";
+import { getSite, saveSite } from "@/lib/site";
 import { getValueAtPath } from "@/lib/builder/paths";
 import { setContent, InvalidEditError } from "@/lib/builder/mutations";
 import { proposeEdit } from "@/lib/builder/ai";
@@ -55,7 +54,7 @@ export async function POST(request: Request) {
       instruction,
     });
     const updated = setContent(site, path, proposal.value);
-    await writeSite(updated);
+    await saveSite(updated);
     // Content lives in nav/footer/profile/any page, so refresh everything.
     revalidatePath("/", "layout");
     return NextResponse.json({

@@ -1,16 +1,12 @@
 import type { MetadataRoute } from "next";
-import { getSite } from "@/lib/site";
-import { absoluteUrl } from "@/lib/seo";
 
 /**
- * robots.txt, generated from the Site JSON. Allows all crawlers and points to
- * the auto-generated sitemap on the site's own base URL.
+ * The app domain is the PRIVATE builder (login, editor, dashboard) — keep it out
+ * of search indexes. Public, indexable per-tenant robots/sitemaps will be served
+ * from each captain's site domain (subdomain) in a later phase.
  */
-export default async function robots(): Promise<MetadataRoute.Robots> {
-  const site = await getSite();
+export default function robots(): MetadataRoute.Robots {
   return {
-    rules: { userAgent: "*", allow: "/" },
-    sitemap: absoluteUrl(site, "/sitemap.xml"),
-    host: site.baseUrl,
+    rules: { userAgent: "*", disallow: "/" },
   };
 }

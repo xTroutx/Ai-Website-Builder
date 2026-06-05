@@ -5,6 +5,8 @@ import { getSingletonPage } from "@/lib/schema";
 import { buildMetadata, JsonLd } from "@/lib/seo";
 import { PageRenderer } from "@/components/templates/PageRenderer";
 
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata(): Promise<Metadata> {
   const site = await getSite();
   const page = getSingletonPage(site, "about");

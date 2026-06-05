@@ -4,38 +4,30 @@ import { parseSite, type Site } from "./schema";
 import { sampleSite } from "./sample";
 
 /**
- * Postgres-backed Site store (used when DATABASE_URL is set — i.e. on Vercel,
- * and locally once Neon is configured). The full Site JSON lives in
- * `Site.data`; we parseSite() it on read so the Zod validation boundary sits
- * exactly here, where the DB boundary is.
- *
- * DB-persistence-first phase: a single site keyed by the sample's slug, owned by
- * a default user. Multi-tenant lookup by request subdomain comes later.
+ * Postgres-backed, per-owner Site store. Each account owns one site (for now);
+ * the full Site JSON lives in `Site.data` and is parseSite()-validated at this
+ * boundary. Multi-tenant public routing by subdomain comes later — today a
+ * captain's site is resolved by the logged-in user (see lib/site.ts).
  */
 
-const SITE_SLUG = sampleSite.slug;
-const OWNER_EMAIL = "owner@fishysites.local";
-
-/** Cast a validated Site to Prisma's JSON input type for the `data` column. */
 function asJson(site: Site): Prisma.InputJsonValue {
   return site as unknown as Prisma.InputJsonValue;
 }
 
-export async function readSite(): Promise<Site> {
-  const prisma = getPrisma();
-  const row = await prisma.site.findUnique({ where: { slug: SITE_SLUG } });
-  if (!row) {
-    await ensureSeed();
-    return parseSite(sampleSite);
-  }
+/** The site owned by a given account. Throws if the account has none. */
+export async function getSiteByOwnerId(ownerId: string): Promise<Site> {
+  const row = await getPrisma().site.findFirst({
+    where: { ownerId },
+    orderBy: { createdAt: "asc" },
+  });
+  if (!row) throw new Error("This account has no site yet.");
   return parseSite(row.data);
 }
 
-export async function writeSite(site: Site): Promise<void> {
-  const prisma = getPrisma();
+/** Persist edits to a site (keyed by its globally-unique tenant slug). */
+export async function writeSiteBySlug(site: Site): Promise<void> {
   const valid = parseSite(site);
-  await ensureSeed(); // guarantees the row + owner exist
-  await prisma.site.update({
+  await getPrisma().site.update({
     where: { slug: valid.slug },
     data: {
       data: asJson(valid),
@@ -45,23 +37,34 @@ export async function writeSite(site: Site): Promise<void> {
   });
 }
 
-/** Create the default owner + sample site if they don't exist yet. */
-async function ensureSeed(): Promise<void> {
-  const prisma = getPrisma();
-  const owner = await prisma.user.upsert({
-    where: { email: OWNER_EMAIL },
-    update: {},
-    create: { email: OWNER_EMAIL, name: "FishySites Owner" },
-  });
-  await prisma.site.upsert({
-    where: { slug: SITE_SLUG },
-    update: {},
-    create: {
-      slug: SITE_SLUG,
-      name: sampleSite.profile.name,
-      themeId: sampleSite.themeId,
-      data: asJson(parseSite(sampleSite)),
-      ownerId: owner.id,
+/** True if a tenant slug is already taken. */
+export async function slugExists(slug: string): Promise<boolean> {
+  const row = await getPrisma().site.findUnique({ where: { slug } });
+  return Boolean(row);
+}
+
+/**
+ * Create a new site for an account by cloning the sample template and
+ * personalizing its identity (slug, base URL, business name).
+ */
+export async function createSiteForOwner(
+  ownerId: string,
+  opts: { slug: string; businessName?: string },
+): Promise<Site> {
+  const draft = structuredClone(sampleSite);
+  draft.slug = opts.slug;
+  draft.baseUrl = `https://${opts.slug}.fishysites.com`;
+  if (opts.businessName) draft.profile.name = opts.businessName;
+
+  const valid = parseSite(draft);
+  await getPrisma().site.create({
+    data: {
+      slug: valid.slug,
+      name: valid.profile.name,
+      themeId: valid.themeId,
+      data: asJson(valid),
+      ownerId,
     },
   });
+  return valid;
 }

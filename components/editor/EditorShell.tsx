@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { logout } from "@/lib/auth-actions";
 
 /**
  * The click-to-edit editor shell (Markup.io-style).
@@ -104,14 +105,24 @@ export function EditorShell({
             <span className="text-zinc-400">·</span>
             <span className="text-zinc-500">Editing: {pageLabel}</span>
           </div>
-          <a
-            href={liveHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-700"
-          >
-            View live ↗
-          </a>
+          <div className="flex items-center gap-2">
+            <a
+              href={liveHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-700"
+            >
+              View live ↗
+            </a>
+            <form action={logout}>
+              <button
+                type="submit"
+                className="rounded border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-100"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
         </div>
         <div
           ref={previewRef}

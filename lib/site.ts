@@ -1,23 +1,28 @@
-import { readSite } from "./store";
+import { auth } from "@/auth";
+import { getSiteByOwnerId, writeSiteBySlug } from "./store-db";
 import type { Site } from "./schema";
 
 /**
- * The single seam through which the app loads Site JSON.
+ * The seam through which the app loads/saves Site JSON for the CURRENT account.
  *
- * Today it reads the file-backed working copy (seeded from the sample on first
- * run; see lib/store.ts), so click-to-edit changes persist and appear on the
- * public pages. Later this becomes a multi-tenant DB lookup (subdomain -> site
- * row -> parseSite(row.data)) — the call sites in /app never change, and the Zod
- * validation boundary stays in exactly the same place.
+ * Resolution is by the logged-in user (routes are gated by middleware, so a
+ * session is always present here). Later, public tenant sites will additionally
+ * resolve by request subdomain — that will be a new function alongside these,
+ * leaving the editor's owner-scoped path unchanged.
  */
-export async function getSite(_slug?: string): Promise<Site> {
-  // TODO(multi-tenant): resolve `_slug` (from the request subdomain) against the
-  // `sites` table instead of the single file store.
-  return readSite();
+export async function getCurrentUserId(): Promise<string> {
+  const session = await auth();
+  const id = session?.user?.id;
+  if (!id) throw new Error("Not authenticated.");
+  return id;
 }
 
-/** Convenience: the canonical absolute base URL for the active site. */
-export async function getBaseUrl(slug?: string): Promise<string> {
-  const site = await getSite(slug);
-  return site.baseUrl;
+/** The current account's site. */
+export async function getSite(): Promise<Site> {
+  return getSiteByOwnerId(await getCurrentUserId());
+}
+
+/** Persist edits to the current account's site. */
+export async function saveSite(site: Site): Promise<void> {
+  return writeSiteBySlug(site);
 }
