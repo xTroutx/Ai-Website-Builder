@@ -1,5 +1,9 @@
 import { auth } from "@/auth";
-import { getSiteByOwnerId, writeSiteBySlug } from "./store-db";
+import {
+  getSiteByOwnerId,
+  writeSiteBySlug,
+  getSiteSummaryForOwner,
+} from "./store-db";
 import type { Site } from "./schema";
 
 /**
@@ -25,4 +29,9 @@ export async function getSite(): Promise<Site> {
 /** Persist edits to the current account's site. */
 export async function saveSite(site: Site): Promise<void> {
   return writeSiteBySlug(site);
+}
+
+/** Dashboard summary for the current account's site. */
+export async function getSiteSummary() {
+  return getSiteSummaryForOwner(await getCurrentUserId());
 }

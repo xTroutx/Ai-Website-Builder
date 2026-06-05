@@ -37,6 +37,45 @@ export async function writeSiteBySlug(site: Site): Promise<void> {
   });
 }
 
+/** Lightweight summary of an account's site for the dashboard. */
+export async function getSiteSummaryForOwner(ownerId: string): Promise<{
+  slug: string;
+  name: string;
+  themeId: string;
+  published: boolean;
+  pageCount: number;
+  profileName: string;
+}> {
+  const row = await getPrisma().site.findFirst({
+    where: { ownerId },
+    orderBy: { createdAt: "asc" },
+  });
+  if (!row) throw new Error("This account has no site yet.");
+  const site = parseSite(row.data);
+  return {
+    slug: row.slug,
+    name: row.name,
+    themeId: row.themeId,
+    published: row.published,
+    pageCount: site.pages.length,
+    profileName: site.profile.name,
+  };
+}
+
+/** Set the published flag on an account's site. */
+export async function setPublishedForOwner(
+  ownerId: string,
+  published: boolean,
+): Promise<boolean> {
+  const row = await getPrisma().site.findFirst({
+    where: { ownerId },
+    orderBy: { createdAt: "asc" },
+  });
+  if (!row) throw new Error("This account has no site yet.");
+  await getPrisma().site.update({ where: { id: row.id }, data: { published } });
+  return published;
+}
+
 /** True if a tenant slug is already taken. */
 export async function slugExists(slug: string): Promise<boolean> {
   const row = await getPrisma().site.findUnique({ where: { slug } });

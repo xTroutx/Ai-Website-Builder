@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { logout } from "@/lib/auth-actions";
 
 /**
@@ -106,6 +107,12 @@ export function EditorShell({
             <span className="text-zinc-500">Editing: {pageLabel}</span>
           </div>
           <div className="flex items-center gap-2">
+            <Link
+              href="/dashboard"
+              className="rounded px-3 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-100"
+            >
+              ← Dashboard
+            </Link>
             <a
               href={liveHref}
               target="_blank"

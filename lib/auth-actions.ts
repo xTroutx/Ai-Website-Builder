@@ -63,7 +63,7 @@ export async function signUp(
 
   // signIn throws a redirect (to /editor) on success — let it propagate.
   try {
-    await signIn("credentials", { email, password, redirectTo: "/editor" });
+    await signIn("credentials", { email, password, redirectTo: "/dashboard" });
   } catch (error) {
     if (error instanceof AuthError) return { error: "Could not sign in." };
     throw error;
@@ -80,7 +80,7 @@ export async function authenticate(
     await signIn("credentials", {
       email: String(formData.get("email") ?? ""),
       password: String(formData.get("password") ?? ""),
-      redirectTo: "/editor",
+      redirectTo: "/dashboard",
     });
   } catch (error) {
     if (error instanceof AuthError) return { error: "Invalid email or password." };
