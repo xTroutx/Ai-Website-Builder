@@ -23,10 +23,12 @@ export const authConfig = {
     },
     jwt({ token, user }) {
       if (user?.id) token.id = user.id;
+      if (user) token.role = (user as { role?: string }).role ?? "user";
       return token;
     },
     session({ session, token }) {
       if (session.user && token.id) session.user.id = String(token.id);
+      if (session.user) session.user.role = String(token.role ?? "user");
       return session;
     },
   },

@@ -24,6 +24,8 @@ model User {
   id           String   @id @default(cuid())
   email        String   @unique
   name         String?
+  /// Platform role: "user" (captain) or "admin" (FishySites operator).
+  role         String   @default("user")
   /// bcrypt hash of the password (email+password auth via Auth.js Credentials).
   passwordHash String?
   /// When the captain completed the onboarding wizard (null = not yet).
@@ -46,6 +48,8 @@ model Site {
   /// The complete Site JSON document — the content source of truth.
   data      Json
   published Boolean  @default(false)
+  /// Admin-controlled suspension (e.g. non-payment): hides the site + blocks editing.
+  suspended Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

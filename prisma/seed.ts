@@ -13,6 +13,8 @@ import { sampleSite } from "../lib/sample";
  */
 const DEMO_EMAIL = "demo@fishysites.local";
 const DEMO_PASSWORD = "fishysites123";
+const ADMIN_EMAIL = "admin@fishysites.local";
+const ADMIN_PASSWORD = "fishysites-admin";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("DATABASE_URL is not set — cannot seed.");
@@ -26,8 +28,20 @@ async function main() {
 
   const owner = await prisma.user.upsert({
     where: { email: DEMO_EMAIL },
-    update: { passwordHash },
-    create: { email: DEMO_EMAIL, name: "Demo Captain", passwordHash },
+    update: { passwordHash, role: "user" },
+    create: { email: DEMO_EMAIL, name: "Demo Captain", passwordHash, role: "user" },
+  });
+
+  const adminHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
+  await prisma.user.upsert({
+    where: { email: ADMIN_EMAIL },
+    update: { passwordHash: adminHash, role: "admin" },
+    create: {
+      email: ADMIN_EMAIL,
+      name: "FishySites Admin",
+      passwordHash: adminHash,
+      role: "admin",
+    },
   });
 
   await prisma.site.upsert({
@@ -42,7 +56,8 @@ async function main() {
     },
   });
 
-  console.log(`✅ Seeded demo account (${DEMO_EMAIL} / ${DEMO_PASSWORD}) + site "${site.slug}".`);
+  console.log(`✅ Seeded demo client (${DEMO_EMAIL} / ${DEMO_PASSWORD}) + site "${site.slug}".`);
+  console.log(`✅ Seeded platform admin (${ADMIN_EMAIL} / ${ADMIN_PASSWORD}).`);
 }
 
 main()

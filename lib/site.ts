@@ -3,6 +3,7 @@ import {
   getSiteByOwnerId,
   writeSiteBySlug,
   getSiteSummaryForOwner,
+  getSiteSuspendedForOwner,
 } from "./store-db";
 import type { Site } from "./schema";
 
@@ -34,4 +35,15 @@ export async function saveSite(site: Site): Promise<void> {
 /** Dashboard summary for the current account's site. */
 export async function getSiteSummary() {
   return getSiteSummaryForOwner(await getCurrentUserId());
+}
+
+/** True if the signed-in user is a FishySites platform admin. */
+export async function isCurrentUserAdmin(): Promise<boolean> {
+  const session = await auth();
+  return session?.user?.role === "admin";
+}
+
+/** True if the current account's site is suspended. */
+export async function isCurrentSiteSuspended(): Promise<boolean> {
+  return getSiteSuspendedForOwner(await getCurrentUserId());
 }

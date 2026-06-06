@@ -1,11 +1,13 @@
 import Link from "next/link";
-import { getSiteSummary } from "@/lib/site";
+import { redirect } from "next/navigation";
+import { getSiteSummary, isCurrentUserAdmin } from "@/lib/site";
 import { togglePublish } from "@/lib/dashboard-actions";
 import { getTemplate, getPalette, getFontPairing } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  if (await isCurrentUserAdmin()) redirect("/admin");
   const s = await getSiteSummary();
   const template = getTemplate(s.templateId);
   const palette = getPalette(s.paletteId);
@@ -17,6 +19,13 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-bold">Welcome back</h1>
         <p className="text-zinc-500">Manage and edit {s.profileName}.</p>
       </div>
+
+      {s.suspended ? (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800">
+          <strong>Your site is suspended.</strong> Editing and your public site are
+          paused. Please contact billing to reinstate your account.
+        </div>
+      ) : null}
 
       {/* Site overview */}
       <section className="rounded-xl border border-zinc-200 bg-white p-6">

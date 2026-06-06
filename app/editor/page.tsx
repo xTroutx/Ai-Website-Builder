@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { getSite } from "@/lib/site";
+import { getSite, isCurrentSiteSuspended } from "@/lib/site";
 import { getHomePage } from "@/lib/schema";
 import { PageRenderer } from "@/components/templates/PageRenderer";
 import { EditorShell } from "@/components/editor/EditorShell";
+import { SuspendedNotice } from "@/components/SuspendedNotice";
 
 // The editor is a private tool surface — never index it.
 export const metadata: Metadata = {
@@ -19,6 +20,9 @@ export const dynamic = "force-dynamic";
  * data-edit path, so the shell can target the chat at exactly the right field.
  */
 export default async function EditorPage() {
+  if (await isCurrentSiteSuspended()) {
+    return <SuspendedNotice showDashboardLink />;
+  }
   const site = await getSite();
   const page = getHomePage(site);
   return (

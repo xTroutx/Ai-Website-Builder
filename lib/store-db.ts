@@ -45,6 +45,7 @@ export async function getSiteSummaryForOwner(ownerId: string): Promise<{
   paletteId: string;
   fontId: string;
   published: boolean;
+  suspended: boolean;
   pageCount: number;
   profileName: string;
 }> {
@@ -61,9 +62,54 @@ export async function getSiteSummaryForOwner(ownerId: string): Promise<{
     paletteId: site.paletteId,
     fontId: site.fontId,
     published: row.published,
+    suspended: row.suspended,
     pageCount: site.pages.length,
     profileName: site.profile.name,
   };
+}
+
+/** Whether an account's site is currently suspended (lightweight check). */
+export async function getSiteSuspendedForOwner(ownerId: string): Promise<boolean> {
+  const row = await getPrisma().site.findFirst({
+    where: { ownerId },
+    orderBy: { createdAt: "asc" },
+    select: { suspended: true },
+  });
+  return row?.suspended ?? false;
+}
+
+// ── Platform admin queries ────────────────────────────────────────────────
+
+/** All sites with owner info, for the admin console (excludes the heavy JSON). */
+export async function listAllSites() {
+  return getPrisma().site.findMany({
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      published: true,
+      suspended: true,
+      createdAt: true,
+      owner: { select: { email: true, name: true } },
+    },
+  });
+}
+
+/** Headline counts for the admin overview. */
+export async function getPlatformCounts() {
+  const [users, sites, published, suspended] = await Promise.all([
+    getPrisma().user.count(),
+    getPrisma().site.count(),
+    getPrisma().site.count({ where: { published: true } }),
+    getPrisma().site.count({ where: { suspended: true } }),
+  ]);
+  return { users, sites, published, suspended };
+}
+
+/** Admin: suspend or reinstate a site by id. */
+export async function setSiteSuspended(siteId: string, suspended: boolean) {
+  await getPrisma().site.update({ where: { id: siteId }, data: { suspended } });
 }
 
 /** Set the published flag on an account's site. */
