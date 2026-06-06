@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { ReactNode } from "react";
 import type { Page, Section, Site } from "@/lib/schema";
 import { Editable, editPath } from "@/components/primitives/Editable";
@@ -102,14 +103,36 @@ function Hero({ section, base, isLead }: { section: S<"hero">; base: string; isL
     <section className="relative isolate overflow-hidden bg-bg text-ink">
       {/* Full-bleed media backdrop (solid-color placeholder until real assets). */}
       <div data-edit={section.media ? editPath(base, "media") : undefined} className="absolute inset-0 -z-10">
-        <div
-          aria-hidden
-          className="absolute inset-0 bg-surface"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(45deg, color-mix(in srgb, var(--color-ink) 6%, transparent) 0 2px, transparent 2px 14px)",
-          }}
-        />
+        {section.media?.src ? (
+          section.media.kind === "video" ? (
+            <video
+              src={section.media.src}
+              className="absolute inset-0 size-full object-cover"
+              autoPlay
+              muted
+              loop
+              playsInline
+            />
+          ) : (
+            <Image
+              src={section.media.src}
+              alt={section.media.alt}
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover"
+            />
+          )
+        ) : (
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-surface"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(45deg, color-mix(in srgb, var(--color-ink) 6%, transparent) 0 2px, transparent 2px 14px)",
+            }}
+          />
+        )}
         {/* Dark wash + fade to the page color at the bottom for legibility. */}
         <div
           aria-hidden

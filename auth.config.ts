@@ -17,7 +17,10 @@ export const authConfig = {
       const isPublic =
         pathname.startsWith("/login") ||
         pathname.startsWith("/signup") ||
-        pathname.startsWith("/api/auth");
+        pathname.startsWith("/api/auth") ||
+        // Blob upload: auth is enforced inside the route at token time; the
+        // upload-completed callback (no session cookie) must reach it.
+        pathname.startsWith("/api/upload");
       if (isPublic) return true;
       return Boolean(auth?.user);
     },

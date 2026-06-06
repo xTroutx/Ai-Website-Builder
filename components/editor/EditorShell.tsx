@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { upload } from "@vercel/blob/client";
 import { logout } from "@/lib/auth-actions";
 import { getValueAtPath } from "@/lib/builder/paths";
 import type { Site } from "@/lib/schema";
@@ -51,6 +52,7 @@ export function EditorShell({
   const [message, setMessage] = useState<{ text: string; error?: boolean } | null>(null);
   const [advanced, setAdvanced] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const page = site.pages.find((p) => p.slug === pageSlug);
   const sections = page?.sections ?? [];
@@ -122,6 +124,32 @@ export function EditorShell({
 
   function setField(path: string, value: string) {
     return call("/api/edit", { op: "set", path, value, advanced });
+  }
+
+  async function handleUpload(file: File) {
+    if (!selectedPath) return;
+    setUploading(true);
+    setMessage(null);
+    try {
+      const kind = file.type.startsWith("video") ? "video" : "image";
+      const blob = await upload(file.name, file, {
+        access: "public",
+        handleUploadUrl: "/api/upload",
+        contentType: file.type,
+      });
+      const dims = kind === "image" ? await imageDims(file).catch(() => ({})) : {};
+      await call("/api/edit", {
+        op: "media",
+        path: selectedPath,
+        src: blob.url,
+        kind,
+        ...dims,
+      });
+    } catch (err) {
+      setMessage({ text: (err as Error).message ?? "Upload failed.", error: true });
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function manualSave(e: FormEvent<HTMLFormElement>) {
@@ -217,6 +245,31 @@ export function EditorShell({
               <p className="mt-3 rounded bg-amber-50 p-2 text-xs text-amber-800">
                 💡 Strong headlines name your location and what you do — e.g. “Charleston Inshore Fishing Charters.” Your page title &amp; description stay SEO-optimized automatically.
               </p>
+            ) : null}
+
+            {/* Upload (primary action for media) */}
+            {selectedPath && kind === "media" ? (
+              <div className="mt-3">
+                <label
+                  className={`block w-full cursor-pointer text-center ${primaryBtn} ${uploading ? "opacity-60" : ""}`}
+                >
+                  {uploading ? "Uploading…" : "Upload image or video"}
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    className="hidden"
+                    disabled={uploading}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleUpload(f);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+                <p className="mt-1 text-xs text-zinc-400">
+                  Images or video (MP4/WebM), up to 200MB.
+                </p>
+              </div>
             ) : null}
 
             {/* Manual override (hidden by default) */}
@@ -319,4 +372,13 @@ function SBtn({ children, title, disabled, onClick }: { children: ReactNode; tit
 
 function cssEscape(value: string): string {
   return value.replace(/["\\]/g, "\\$&");
+}
+
+function imageDims(file: File): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
 }

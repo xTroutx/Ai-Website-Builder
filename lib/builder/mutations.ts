@@ -114,6 +114,30 @@ export function moveSection(
   return revalidate(next, `Move section "${sectionId}"`);
 }
 
+/** Update a media object (image/video) at a path — src, kind, dimensions, caption. */
+export function setMedia(
+  site: Site,
+  path: string,
+  patch: {
+    src?: string;
+    kind?: "image" | "video";
+    width?: number;
+    height?: number;
+    caption?: string;
+  },
+): Site {
+  const next = structuredClone(site);
+  const media = getValueAtPath(next, path);
+  if (!media || typeof media !== "object") {
+    throw new InvalidEditError(`No media at "${path}".`);
+  }
+  const target = media as Record<string, unknown>;
+  for (const [k, v] of Object.entries(patch)) {
+    if (v !== undefined) target[k] = v;
+  }
+  return revalidate(next, `Set media "${path}"`);
+}
+
 /** Remove a section from a page. */
 export function removeSection(
   site: Site,

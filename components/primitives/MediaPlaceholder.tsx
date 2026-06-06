@@ -1,14 +1,11 @@
+import Image from "next/image";
 import type { Media } from "@/lib/schema";
 
 /**
- * Renders a media slot. This session it always draws a tokenized, solid-color
- * placeholder labelled with the image's `alt` text (per the "solid-color
- * placeholders" decision) — no external/binary assets.
- *
- * When real assets arrive, the only change here is swapping the placeholder
- * branch for `next/image`; the schema (`Media`) and every call site stay put.
- * The slot carries `data-edit` so clicking it targets the media field, and the
- * `alt` text is itself editable content.
+ * Renders a media slot. When the captain has uploaded an asset (`src` set) it
+ * renders the real image (optimized via next/image) or a video; otherwise it
+ * draws a tokenized, labelled placeholder. The slot carries `data-edit` so the
+ * builder can select it (to upload/replace, or edit alt/caption).
  */
 export function MediaPlaceholder({
   media,
@@ -18,31 +15,65 @@ export function MediaPlaceholder({
   rounded = true,
 }: {
   media: Media;
-  /** Dot-path of this media field in the Site JSON. */
   path: string;
   className?: string;
-  /** CSS aspect-ratio; overridden by intrinsic dimensions when present. */
   ratio?: string;
   rounded?: boolean;
 }) {
   const aspectRatio =
     media.width && media.height ? `${media.width} / ${media.height}` : ratio;
 
-  // Future: if (media.src) return <Image .../>
+  const frame = [
+    "relative overflow-hidden",
+    rounded ? "rounded-theme" : "",
+    className ?? "",
+  ].join(" ");
+
+  if (media.src && media.kind === "video") {
+    return (
+      <div data-edit={path} className={frame} style={{ aspectRatio }}>
+        <video
+          src={media.src}
+          className="absolute inset-0 size-full object-cover"
+          controls
+          playsInline
+          preload="metadata"
+        />
+      </div>
+    );
+  }
+
+  if (media.src) {
+    return (
+      <div data-edit={path} className={frame} style={{ aspectRatio }}>
+        <Image
+          src={media.src}
+          alt={media.alt}
+          fill
+          sizes="(max-width: 768px) 100vw, 50vw"
+          className="object-cover"
+        />
+        {media.caption ? (
+          <span className="absolute bottom-0 left-0 right-0 bg-black/40 px-2 py-1 text-xs text-white">
+            {media.caption}
+          </span>
+        ) : null}
+      </div>
+    );
+  }
+
+  // No asset yet — tokenized placeholder labelled with the alt text.
   return (
     <div
       data-edit={path}
       role="img"
       aria-label={media.alt}
       className={[
-        "relative flex items-center justify-center overflow-hidden",
-        "bg-surface text-muted border border-line",
-        rounded ? "rounded-theme" : "",
-        className ?? "",
+        "flex items-center justify-center bg-surface text-muted border border-line",
+        frame,
       ].join(" ")}
       style={{ aspectRatio }}
     >
-      {/* Decorative diagonal wash so placeholders read as image slots. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-[0.06]"

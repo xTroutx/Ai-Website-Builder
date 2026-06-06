@@ -7,6 +7,7 @@ import {
   setSectionHidden,
   moveSection,
   removeSection,
+  setMedia,
   InvalidEditError,
 } from "@/lib/builder/mutations";
 import { proposeEdit } from "@/lib/builder/ai";
@@ -105,6 +106,23 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: `Unknown action "${action}".` }, { status: 400 });
       }
       await saveSite(updated);
+      revalidatePath("/", "layout");
+      return NextResponse.json({ ok: true });
+    }
+
+    if (op === "media") {
+      const { path, src, kind, width, height, caption } = body as {
+        path?: string;
+        src?: string;
+        kind?: "image" | "video";
+        width?: number;
+        height?: number;
+        caption?: string;
+      };
+      if (!path) {
+        return NextResponse.json({ error: "path required." }, { status: 400 });
+      }
+      await saveSite(setMedia(site, path, { src, kind, width, height, caption }));
       revalidatePath("/", "layout");
       return NextResponse.json({ ok: true });
     }

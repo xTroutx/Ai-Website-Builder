@@ -21,6 +21,8 @@ export const SlugSchema = z
  * so swapping placeholders for photos requires no schema change.
  */
 export const MediaSchema = z.object({
+  /** Whether this asset is an image or a video. */
+  kind: z.enum(["image", "video"]).default("image"),
   /** Asset path or URL. May be empty while a captain hasn't uploaded a photo. */
   src: z.string().default(""),
   /** Required alt text — content, editable, and important for a11y + SEO. */
