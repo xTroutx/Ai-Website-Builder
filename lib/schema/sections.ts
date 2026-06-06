@@ -16,11 +16,33 @@ import { CtaSchema, MediaSchema, SlugSchema } from "./primitives";
  * `type` key on each option).
  */
 
+/**
+ * Per-section background styling (selected by clicking the whole section). Colors
+ * are curated token choices (not raw hex), with an optional background image/video
+ * and a dark/light overlay whose opacity is adjustable.
+ */
+export const SectionBackgroundSchema = z.object({
+  /** Curated background color (token-backed). Omitted = the section's default. */
+  color: z.enum(["default", "surface", "band", "primary"]).optional(),
+  /** Optional background image/video behind the section content. */
+  media: MediaSchema.optional(),
+  /** Overlay over the background for legibility/mood. */
+  overlay: z
+    .object({
+      tone: z.enum(["dark", "light"]).default("dark"),
+      opacity: z.number().int().min(0).max(100).default(40),
+    })
+    .optional(),
+});
+export type SectionBackground = z.infer<typeof SectionBackgroundSchema>;
+
 const base = {
   /** Stable id, unique within a page. Used for React keys and data-edit paths. */
   id: z.string().min(1),
   /** Keep the section in the JSON but don't render it. */
   hidden: z.boolean().default(false),
+  /** Section-level background styling (color/image/overlay). */
+  background: SectionBackgroundSchema.optional(),
 };
 
 /** Big top-of-page banner: headline, supporting copy, CTAs, and a hero image. */

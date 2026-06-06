@@ -1,6 +1,6 @@
 import Image from "next/image";
 import type { ReactNode } from "react";
-import type { Page, Section, Site } from "@/lib/schema";
+import type { Page, Section, Site, SectionBackground } from "@/lib/schema";
 import { Editable, editPath } from "@/components/primitives/Editable";
 import { MediaPlaceholder } from "@/components/primitives/MediaPlaceholder";
 import {
@@ -73,15 +73,56 @@ export function SectionRenderer({
 
 type S<T extends Section["type"]> = Extract<Section, { type: T }>;
 
-/** Section band with the design's vertical rhythm and a tone (page/card/light). */
+/** Background image/video + overlay layer, shared by Band, hero, and cta. */
+function SectionBackdrop({
+  media,
+  overlay,
+  dataEdit,
+  defaultOverlay,
+}: {
+  media?: SectionBackground["media"];
+  overlay?: SectionBackground["overlay"];
+  dataEdit?: string;
+  defaultOverlay?: boolean;
+}) {
+  const ov = overlay ?? (media?.src && defaultOverlay ? { tone: "dark" as const, opacity: 40 } : undefined);
+  return (
+    <div data-edit={dataEdit} className="absolute inset-0 -z-10">
+      {media?.src ? (
+        media.kind === "video" ? (
+          <video src={media.src} className="absolute inset-0 size-full object-cover" autoPlay muted loop playsInline />
+        ) : (
+          <Image src={media.src} alt={media.alt} fill sizes="100vw" className="object-cover" />
+        )
+      ) : null}
+      {ov ? (
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{ backgroundColor: ov.tone === "dark" ? "#000" : "#fff", opacity: ov.opacity / 100 }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Section band with the design's vertical rhythm. `tone` is the section's default
+ * color; the captain's per-section `bg` (color/media/overlay) overrides it.
+ * `anchor` (page.slug.sectionId) makes the whole section selectable in the editor.
+ */
 function Band({
   children,
   tone = "bg",
   className,
+  bg,
+  anchor,
 }: {
   children: ReactNode;
   tone?: "bg" | "surface" | "band";
   className?: string;
+  bg?: SectionBackground;
+  anchor?: string;
 }) {
   const toneClass =
     tone === "band"
@@ -89,8 +130,32 @@ function Band({
       : tone === "surface"
         ? "bg-surface text-ink"
         : "bg-bg text-ink";
+  const colorClass =
+    bg?.color === "surface"
+      ? "bg-surface text-ink"
+      : bg?.color === "band"
+        ? "bg-band text-on-band"
+        : bg?.color === "primary"
+          ? "bg-primary text-on-primary"
+          : toneClass;
+  const hasMedia = Boolean(bg?.media?.src);
   return (
-    <section className={["py-16 sm:py-20 lg:py-[100px]", toneClass, className ?? ""].join(" ")}>
+    <section
+      data-section={anchor}
+      className={[
+        "relative isolate py-16 sm:py-20 lg:py-[100px]",
+        hasMedia ? "text-white" : colorClass,
+        className ?? "",
+      ].join(" ")}
+    >
+      {hasMedia || bg?.overlay ? (
+        <SectionBackdrop
+          media={bg?.media}
+          overlay={bg?.overlay}
+          defaultOverlay
+          dataEdit={anchor ? `${anchor}.background.media` : undefined}
+        />
+      ) : null}
       {children}
     </section>
   );
@@ -99,29 +164,20 @@ function Band({
 // ─────────────────────────────────────────────────────────────── hero ──
 function Hero({ section, base, isLead }: { section: S<"hero">; base: string; isLead: boolean }) {
   const HeadingTag = isLead ? "h1" : "h2";
+  // Prefer a section-background image (set via the Section panel) over the legacy hero media.
+  const heroMedia = section.background?.media?.src ? section.background.media : section.media;
+  const heroMediaPath = section.background?.media?.src
+    ? editPath(base, "background", "media")
+    : editPath(base, "media");
   return (
-    <section className="relative isolate overflow-hidden bg-bg text-ink">
+    <section data-section={base} className="relative isolate overflow-hidden bg-bg text-ink">
       {/* Full-bleed media backdrop (solid-color placeholder until real assets). */}
-      <div data-edit={section.media ? editPath(base, "media") : undefined} className="absolute inset-0 -z-10">
-        {section.media?.src ? (
-          section.media.kind === "video" ? (
-            <video
-              src={section.media.src}
-              className="absolute inset-0 size-full object-cover"
-              autoPlay
-              muted
-              loop
-              playsInline
-            />
+      <div data-edit={heroMediaPath} className="absolute inset-0 -z-10">
+        {heroMedia?.src ? (
+          heroMedia.kind === "video" ? (
+            <video src={heroMedia.src} className="absolute inset-0 size-full object-cover" autoPlay muted loop playsInline />
           ) : (
-            <Image
-              src={section.media.src}
-              alt={section.media.alt}
-              fill
-              priority
-              sizes="100vw"
-              className="object-cover"
-            />
+            <Image src={heroMedia.src} alt={heroMedia.alt} fill priority sizes="100vw" className="object-cover" />
           )
         ) : (
           <div
@@ -142,6 +198,16 @@ function Hero({ section, base, isLead }: { section: S<"hero">; base: string; isL
               "linear-gradient(105deg, color-mix(in srgb, var(--color-bg) 80%, transparent) 18%, transparent 60%), linear-gradient(to bottom, transparent 55%, var(--color-bg) 92%)",
           }}
         />
+        {section.background?.overlay ? (
+          <div
+            aria-hidden
+            className="absolute inset-0"
+            style={{
+              backgroundColor: section.background.overlay.tone === "dark" ? "#000" : "#fff",
+              opacity: section.background.overlay.opacity / 100,
+            }}
+          />
+        ) : null}
       </div>
 
       <Container>
@@ -183,7 +249,7 @@ function Hero({ section, base, isLead }: { section: S<"hero">; base: string; isL
 function MediaText({ section, base }: { section: S<"mediaText">; base: string }) {
   const imageFirst = section.mediaSide === "left";
   return (
-    <Band tone={section.tone === "light" ? "band" : "bg"}>
+    <Band tone={section.tone === "light" ? "band" : "bg"} bg={section.background} anchor={base}>
       <Container>
         <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
           <div className={imageFirst ? "lg:order-1" : "lg:order-2"}>
@@ -225,7 +291,7 @@ function MediaText({ section, base }: { section: S<"mediaText">; base: string })
 // ─────────────────────────────────────────────────────────────── richText ──
 function RichText({ section, base }: { section: S<"richText">; base: string }) {
   return (
-    <Band>
+    <Band bg={section.background} anchor={base}>
       <Container>
         <div className="mx-auto flex max-w-3xl flex-col gap-4">
           <SectionHeading text={section.heading} path={editPath(base, "heading")} />
@@ -243,7 +309,7 @@ function RichText({ section, base }: { section: S<"richText">; base: string }) {
 // ──────────────────────────────────────────────────────── featureGrid ──
 function FeatureGrid({ section, base }: { section: S<"featureGrid">; base: string }) {
   return (
-    <Band tone="surface">
+    <Band tone="surface" bg={section.background} anchor={base}>
       <Container>
         <SectionHeading text={section.heading} path={editPath(base, "heading")} align="center" className="mb-12 items-center" />
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -271,7 +337,7 @@ function FeatureGrid({ section, base }: { section: S<"featureGrid">; base: strin
 // ─────────────────────────────────────────────────────────────── tripCards ──
 function TripCards({ section, base }: { section: S<"tripCards">; base: string }) {
   return (
-    <Band>
+    <Band bg={section.background} anchor={base}>
       <Container>
         <SectionHeading text={section.heading} path={editPath(base, "heading")} align="center" className="mb-12 items-center" />
         <div className="grid gap-8 sm:grid-cols-2">
@@ -316,7 +382,7 @@ function TripCards({ section, base }: { section: S<"tripCards">; base: string })
 // ──────────────────────────────────────────────────────── speciesCards ──
 function SpeciesCards({ section, base }: { section: S<"speciesCards">; base: string }) {
   return (
-    <Band tone="surface">
+    <Band tone="surface" bg={section.background} anchor={base}>
       <Container>
         <SectionHeading text={section.heading} path={editPath(base, "heading")} align="center" className="mb-12 items-center" />
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
@@ -359,7 +425,7 @@ function SpeciesCards({ section, base }: { section: S<"speciesCards">; base: str
 // ─────────────────────────────────────────────────────── pricingTable ──
 function PricingTable({ section, base }: { section: S<"pricingTable">; base: string }) {
   return (
-    <Band tone="surface">
+    <Band tone="surface" bg={section.background} anchor={base}>
       <Container>
         <SectionHeading text={section.heading} path={editPath(base, "heading")} align="center" className="mb-12 items-center" />
         <div className="mx-auto grid max-w-4xl gap-6 sm:grid-cols-2">
@@ -417,7 +483,7 @@ function PricingTable({ section, base }: { section: S<"pricingTable">; base: str
 // ────────────────────────────────────────────────────────────── gallery ──
 function Gallery({ section, base }: { section: S<"gallery">; base: string }) {
   return (
-    <Band>
+    <Band bg={section.background} anchor={base}>
       <Container>
         <SectionHeading text={section.heading} path={editPath(base, "heading")} align="center" className="mb-12 items-center" />
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
@@ -433,7 +499,7 @@ function Gallery({ section, base }: { section: S<"gallery">; base: string }) {
 // ───────────────────────────────────────────────────────── testimonials ──
 function Testimonials({ section, base }: { section: S<"testimonials">; base: string }) {
   return (
-    <Band tone="band">
+    <Band tone="band" bg={section.background} anchor={base}>
       <Container>
         <SectionHeading text={section.heading} path={editPath(base, "heading")} align="center" className="mb-12 items-center" />
         <div className="grid gap-6 md:grid-cols-3">
@@ -465,7 +531,7 @@ function Testimonials({ section, base }: { section: S<"testimonials">; base: str
 // ────────────────────────────────────────────────────────────────── faq ──
 function Faq({ section, base }: { section: S<"faq">; base: string }) {
   return (
-    <Band>
+    <Band bg={section.background} anchor={base}>
       <Container>
         <SectionHeading text={section.heading} path={editPath(base, "heading")} className="mb-10" />
         <dl className="mx-auto max-w-3xl divide-y divide-line">
@@ -488,7 +554,7 @@ function Faq({ section, base }: { section: S<"faq">; base: string }) {
 // ───────────────────────────────────────────────────────────── infoList ──
 function InfoList({ section, base }: { section: S<"infoList">; base: string }) {
   return (
-    <Band tone="surface">
+    <Band tone="surface" bg={section.background} anchor={base}>
       <Container>
         <SectionHeading text={section.heading} path={editPath(base, "heading")} className="mb-8" />
         <dl className="mx-auto grid max-w-3xl gap-px overflow-hidden rounded-theme border border-line bg-line sm:grid-cols-2">
@@ -511,7 +577,7 @@ function InfoList({ section, base }: { section: S<"infoList">; base: string }) {
 // ──────────────────────────────────────────────────────────────── stats ──
 function Stats({ section, base }: { section: S<"stats">; base: string }) {
   return (
-    <Band>
+    <Band bg={section.background} anchor={base}>
       <Container>
         <SectionHeading text={section.heading} path={editPath(base, "heading")} align="center" className="mb-12 items-center" />
         <dl className="grid grid-cols-2 gap-6 lg:grid-cols-4">
@@ -533,7 +599,8 @@ function Stats({ section, base }: { section: S<"stats">; base: string }) {
 
 // ────────────────────────────────────────────────────────────── ctaBanner ──
 function CtaBanner({ section, base }: { section: S<"ctaBanner">; base: string }) {
-  const hasMedia = Boolean(section.media?.src);
+  const ctaMedia = section.background?.media?.src ? section.background.media : section.media;
+  const hasMedia = Boolean(ctaMedia?.src);
   const inner = (
     <Container>
       <div className="flex flex-col items-center gap-6 text-center">
@@ -553,30 +620,27 @@ function CtaBanner({ section, base }: { section: S<"ctaBanner">; base: string })
     </Container>
   );
 
-  if (hasMedia && section.media) {
+  if (hasMedia && ctaMedia) {
+    const ctaMediaPath = section.background?.media?.src
+      ? editPath(base, "background", "media")
+      : editPath(base, "media");
+    const overlay = section.background?.overlay ?? { tone: "dark" as const, opacity: 55 };
     return (
-      <section className="relative isolate overflow-hidden py-16 sm:py-20 lg:py-[100px]">
-        <div data-edit={editPath(base, "media")} className="absolute inset-0 -z-10">
-          {section.media.kind === "video" ? (
-            <video src={section.media.src} className="absolute inset-0 size-full object-cover" autoPlay muted loop playsInline />
-          ) : (
-            <Image src={section.media.src} alt={section.media.alt} fill sizes="100vw" className="object-cover" />
-          )}
-          <div aria-hidden className="absolute inset-0 bg-black/55" />
-        </div>
+      <section data-section={base} className="relative isolate overflow-hidden py-16 sm:py-20 lg:py-[100px]">
+        <SectionBackdrop media={ctaMedia} overlay={overlay} dataEdit={ctaMediaPath} />
         {inner}
       </section>
     );
   }
 
-  return <Band tone="surface">{inner}</Band>;
+  return <Band tone="surface" bg={section.background} anchor={base}>{inner}</Band>;
 }
 
 // ──────────────────────────────────────────────────────────────── contact ──
 function Contact({ section, base, site }: { section: S<"contact">; base: string; site: Site }) {
   const { contact } = site.profile;
   return (
-    <Band>
+    <Band bg={section.background} anchor={base}>
       <Container>
         <div className="grid gap-10 lg:grid-cols-2">
           <div className="flex flex-col gap-5">
@@ -640,7 +704,7 @@ function Field({ label, name, type = "text" }: { label: string; name: string; ty
 // ────────────────────────────────────────────────────────────── articleBody ──
 function ArticleBody({ section, base }: { section: S<"articleBody">; base: string }) {
   return (
-    <Band>
+    <Band bg={section.background} anchor={base}>
       <Container>
         <article className="mx-auto flex max-w-3xl flex-col gap-5">
           {section.pullQuote ? (

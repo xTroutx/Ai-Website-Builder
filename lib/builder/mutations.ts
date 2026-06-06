@@ -176,6 +176,64 @@ export function setSectionMedia(
   return revalidate(next, `Set media on "${sectionId}"`);
 }
 
+/** Set a section's background color and/or overlay (curated; whole-section style). */
+export function setSectionBackground(
+  site: Site,
+  pageSlug: string,
+  sectionId: string,
+  patch: {
+    color?: "default" | "surface" | "band" | "primary";
+    overlay?: { tone: "dark" | "light"; opacity: number } | null;
+  },
+): Site {
+  const next = structuredClone(site);
+  const page = findPage(next, pageSlug);
+  const section = page.sections.find((s) => s.id === sectionId);
+  if (!section) throw new InvalidEditError(`No section "${sectionId}".`);
+  const bg = { ...(section.background ?? {}) };
+  if (patch.color !== undefined) bg.color = patch.color;
+  if (patch.overlay !== undefined) {
+    if (patch.overlay === null) delete bg.overlay;
+    else bg.overlay = patch.overlay;
+  }
+  section.background = bg;
+  return revalidate(next, `Style section "${sectionId}"`);
+}
+
+/** Set/replace a section's background image or video (any section). */
+export function setSectionBackgroundMedia(
+  site: Site,
+  pageSlug: string,
+  sectionId: string,
+  media: { src: string; kind: "image" | "video" },
+): Site {
+  const next = structuredClone(site);
+  const page = findPage(next, pageSlug);
+  const section = page.sections.find((s) => s.id === sectionId);
+  if (!section) throw new InvalidEditError(`No section "${sectionId}".`);
+  const s = section as Record<string, unknown>;
+  const existing = section.background?.media;
+  const alt =
+    existing?.alt ||
+    (typeof s.heading === "string"
+      ? s.heading
+      : typeof s.headline === "string"
+        ? s.headline
+        : "Background image");
+  section.background = {
+    ...(section.background ?? {}),
+    media: {
+      ...(existing ?? {}),
+      kind: media.kind,
+      src: media.src,
+      alt,
+      focalX: existing?.focalX ?? 0.5,
+      focalY: existing?.focalY ?? 0.5,
+    },
+  };
+  return revalidate(next, `Set background image on "${sectionId}"`);
+}
+
 /** Remove a section from a page. */
 export function removeSection(
   site: Site,

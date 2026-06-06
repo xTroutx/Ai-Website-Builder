@@ -54,6 +54,11 @@ export function EditorShell({
   const [manualOpen, setManualOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
+  const [secInitFor, setSecInitFor] = useState<string | null>(null);
+  const [ovOn, setOvOn] = useState(false);
+  const [ovTone, setOvTone] = useState<"dark" | "light">("dark");
+  const [ovOpacity, setOvOpacity] = useState(40);
 
   const page = site.pages.find((p) => p.slug === pageSlug);
   const sections = page?.sections ?? [];
@@ -66,6 +71,18 @@ export function EditorShell({
   }
   const kind = classify(selectedValue);
 
+  const selectedSection = selectedSectionId
+    ? sections.find((s) => s.id === selectedSectionId)
+    : undefined;
+  // Initialize overlay controls when the selected section changes (render-time guard).
+  if (selectedSectionId && selectedSectionId !== secInitFor) {
+    setSecInitFor(selectedSectionId);
+    const ov = selectedSection?.background?.overlay;
+    setOvOn(Boolean(ov));
+    setOvTone(ov?.tone ?? "dark");
+    setOvOpacity(ov?.opacity ?? 40);
+  }
+
   // Click-to-select inside the preview; block navigation.
   useEffect(() => {
     const root = previewRef.current;
@@ -73,15 +90,31 @@ export function EditorShell({
     const onClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest("a") || target.closest("button")) e.preventDefault();
+      // An element inside a section takes priority over the section itself.
       const el = target.closest<HTMLElement>("[data-edit]");
-      if (!el) return;
-      e.preventDefault();
-      e.stopPropagation();
-      const path = el.getAttribute("data-edit");
-      if (path) {
-        setSelectedPath(path);
-        setManualOpen(false);
-        setMessage(null);
+      if (el) {
+        e.preventDefault();
+        e.stopPropagation();
+        const path = el.getAttribute("data-edit");
+        if (path) {
+          setSelectedPath(path);
+          setSelectedSectionId(null);
+          setManualOpen(false);
+          setMessage(null);
+        }
+        return;
+      }
+      // Otherwise, clicking section chrome selects the whole section.
+      const sec = target.closest<HTMLElement>("[data-section]");
+      if (sec) {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = (sec.getAttribute("data-section") ?? "").split(".").slice(1).join(".");
+        if (id) {
+          setSelectedSectionId(id);
+          setSelectedPath(null);
+          setMessage(null);
+        }
       }
     };
     root.addEventListener("click", onClick, true);
@@ -221,10 +254,41 @@ export function EditorShell({
     await setField(`${pageSlug}.seo.metaDescription`, String(fd.get("metaDescription") ?? ""));
   }
 
+  function applySectionBg(patch: {
+    color?: "default" | "surface" | "band" | "primary";
+    overlay?: { tone: "dark" | "light"; opacity: number } | null;
+  }) {
+    if (!selectedSectionId) return;
+    void call("/api/edit", { op: "sectionBg", pageSlug, sectionId: selectedSectionId, ...patch });
+  }
+
+  async function uploadSectionBg(file: File) {
+    if (!selectedSectionId) return;
+    setUploading(true);
+    setMessage(null);
+    try {
+      const m = await uploadToBlob(file);
+      await call("/api/edit", {
+        op: "sectionBgMedia",
+        pageSlug,
+        sectionId: selectedSectionId,
+        src: m.url,
+        kind: m.kind,
+      });
+    } catch (err) {
+      setMessage({ text: (err as Error).message ?? "Upload failed.", error: true });
+    } finally {
+      setUploading(false);
+    }
+  }
+
   return (
     <div className="flex h-screen w-full overflow-hidden bg-zinc-100 text-zinc-900">
       {selectedPath ? (
         <style>{`[data-edit="${cssEscape(selectedPath)}"]{outline:3px solid #2563eb!important;outline-offset:2px;border-radius:2px;}`}</style>
+      ) : null}
+      {selectedSectionId ? (
+        <style>{`[data-section$=".${cssEscape(selectedSectionId)}"]{outline:3px solid #7c3aed!important;outline-offset:-3px;}`}</style>
       ) : null}
 
       {/* Preview */}
@@ -380,6 +444,104 @@ export function EditorShell({
             ) : null}
           </div>
 
+          {/* Section style (whole section selected) */}
+          {selectedSection ? (
+            <div className="border-b border-zinc-200 px-4 py-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold">
+                  Section: <span className="text-zinc-500">{selectedSection.type}</span>
+                </h2>
+                <button onClick={() => setSelectedSectionId(null)} className="text-xs text-zinc-500 underline">
+                  clear
+                </button>
+              </div>
+
+              <p className="mt-3 text-xs font-medium uppercase tracking-wide text-zinc-400">Background color</p>
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {(["default", "surface", "band", "primary"] as const).map((c) => {
+                  const active =
+                    selectedSection.background?.color === c ||
+                    (!selectedSection.background?.color && c === "default");
+                  return (
+                    <button
+                      key={c}
+                      onClick={() => applySectionBg({ color: c })}
+                      disabled={sending}
+                      className={`rounded border px-2 py-1 text-xs ${active ? "border-blue-600 bg-blue-50 text-blue-700" : "border-zinc-300 text-zinc-600 hover:bg-zinc-50"}`}
+                    >
+                      {c === "band" ? "Highlight" : c === "default" ? "Default" : c === "surface" ? "Surface" : "Primary"}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <p className="mt-3 text-xs font-medium uppercase tracking-wide text-zinc-400">Background image / video</p>
+              <label className={`mt-1 block w-full cursor-pointer text-center ${secondaryBtn} ${uploading ? "opacity-60" : ""}`}>
+                {uploading ? "Uploading…" : "Upload background"}
+                <input
+                  type="file"
+                  accept="image/*,video/*"
+                  className="hidden"
+                  disabled={uploading}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) uploadSectionBg(f);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+
+              <label className="mt-3 flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={ovOn}
+                  onChange={(e) => {
+                    const on = e.target.checked;
+                    setOvOn(on);
+                    applySectionBg({ overlay: on ? { tone: ovTone, opacity: ovOpacity } : null });
+                  }}
+                />
+                Overlay
+              </label>
+              {ovOn ? (
+                <div className="mt-2 flex flex-col gap-2">
+                  <div className="flex gap-1.5">
+                    {(["dark", "light"] as const).map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => {
+                          setOvTone(t);
+                          applySectionBg({ overlay: { tone: t, opacity: ovOpacity } });
+                        }}
+                        disabled={sending}
+                        className={`rounded border px-2 py-1 text-xs capitalize ${ovTone === t ? "border-blue-600 bg-blue-50 text-blue-700" : "border-zinc-300 text-zinc-600"}`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                  <label className="text-xs text-zinc-500">
+                    Opacity: {ovOpacity}%
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={ovOpacity}
+                      onChange={(e) => setOvOpacity(Number(e.target.value))}
+                      onPointerUp={() => applySectionBg({ overlay: { tone: ovTone, opacity: ovOpacity } })}
+                      onKeyUp={() => applySectionBg({ overlay: { tone: ovTone, opacity: ovOpacity } })}
+                      className="w-full"
+                    />
+                  </label>
+                </div>
+              ) : null}
+
+              {message ? (
+                <p className={`mt-2 text-sm ${message.error ? "text-red-600" : "text-green-700"}`}>{message.text}</p>
+              ) : null}
+            </div>
+          ) : null}
+
           {/* Advanced SEO */}
           <div className="border-b border-zinc-200 px-4 py-4">
             <label className="flex items-center gap-2 text-sm font-semibold">
@@ -405,7 +567,16 @@ export function EditorShell({
             <ul className="mt-3 flex flex-col gap-2">
               {sections.map((s, i) => (
                 <li key={s.id} className="flex items-center gap-2 rounded-md border border-zinc-200 px-2 py-1.5 text-sm">
-                  <span className={`flex-1 truncate ${s.hidden ? "text-zinc-400 line-through" : ""}`}>{s.type}</span>
+                  <button
+                    onClick={() => {
+                      setSelectedSectionId(s.id);
+                      setSelectedPath(null);
+                      setMessage(null);
+                    }}
+                    className={`flex-1 truncate text-left ${s.hidden ? "text-zinc-400 line-through" : ""} ${selectedSectionId === s.id ? "font-semibold text-blue-700" : ""}`}
+                  >
+                    {s.type}
+                  </button>
                   <SBtn title="Up" disabled={sending || i === 0} onClick={() => call("/api/edit", { op: "section", action: "up", pageSlug, sectionId: s.id })}>↑</SBtn>
                   <SBtn title="Down" disabled={sending || i === sections.length - 1} onClick={() => call("/api/edit", { op: "section", action: "down", pageSlug, sectionId: s.id })}>↓</SBtn>
                   <SBtn title={s.hidden ? "Show" : "Hide"} disabled={sending} onClick={() => call("/api/edit", { op: "section", action: s.hidden ? "show" : "hide", pageSlug, sectionId: s.id })}>{s.hidden ? "🙈" : "👁"}</SBtn>

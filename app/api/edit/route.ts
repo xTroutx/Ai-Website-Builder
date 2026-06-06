@@ -8,6 +8,8 @@ import {
   moveSection,
   removeSection,
   setMedia,
+  setSectionBackground,
+  setSectionBackgroundMedia,
   InvalidEditError,
 } from "@/lib/builder/mutations";
 import { proposeEdit } from "@/lib/builder/ai";
@@ -123,6 +125,36 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "path required." }, { status: 400 });
       }
       await saveSite(setMedia(site, path, { src, kind, width, height, caption }));
+      revalidatePath("/", "layout");
+      return NextResponse.json({ ok: true });
+    }
+
+    if (op === "sectionBg") {
+      const { pageSlug, sectionId, color, overlay } = body as {
+        pageSlug?: string;
+        sectionId?: string;
+        color?: "default" | "surface" | "band" | "primary";
+        overlay?: { tone: "dark" | "light"; opacity: number } | null;
+      };
+      if (!pageSlug || !sectionId) {
+        return NextResponse.json({ error: "pageSlug and sectionId required." }, { status: 400 });
+      }
+      await saveSite(setSectionBackground(site, pageSlug, sectionId, { color, overlay }));
+      revalidatePath("/", "layout");
+      return NextResponse.json({ ok: true });
+    }
+
+    if (op === "sectionBgMedia") {
+      const { pageSlug, sectionId, src, kind } = body as {
+        pageSlug?: string;
+        sectionId?: string;
+        src?: string;
+        kind?: "image" | "video";
+      };
+      if (!pageSlug || !sectionId || !src || !kind) {
+        return NextResponse.json({ error: "pageSlug, sectionId, src, kind required." }, { status: 400 });
+      }
+      await saveSite(setSectionBackgroundMedia(site, pageSlug, sectionId, { src, kind }));
       revalidatePath("/", "layout");
       return NextResponse.json({ ok: true });
     }
