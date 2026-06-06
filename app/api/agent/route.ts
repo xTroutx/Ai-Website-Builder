@@ -22,6 +22,7 @@ export async function POST(request: Request) {
     pageSlug?: string;
     selectedPath?: string | null;
     advanced?: boolean;
+    attachment?: { url: string; kind: "image" | "video" } | null;
   };
   try {
     body = await request.json();
@@ -33,7 +34,8 @@ export async function POST(request: Request) {
   const pageSlug = body.pageSlug ?? "";
   const selectedPath = body.selectedPath ?? null;
   const advanced = body.advanced === true;
-  if (!message || !pageSlug) {
+  const attachment = body.attachment ?? null;
+  if ((!message && !attachment) || !pageSlug) {
     return NextResponse.json({ error: "message and pageSlug are required." }, { status: 400 });
   }
 
@@ -42,13 +44,27 @@ export async function POST(request: Request) {
 
   try {
     if (apiKey) {
-      const result = await runAgent({ apiKey, message, pageSlug, selectedPath, advanced, site });
+      const result = await runAgent({
+        apiKey,
+        message: message || "Place the attached media on the appropriate section.",
+        pageSlug,
+        selectedPath,
+        advanced,
+        site,
+        attachment,
+      });
       await saveSite(result.site);
       revalidatePath("/", "layout");
       return NextResponse.json({ ok: true, summary: result.summary, changed: result.changed });
     }
 
     // No key — limited fallback: rewrite the selected text field with the mock.
+    if (attachment) {
+      return NextResponse.json(
+        { error: "Add an Anthropic API key in Admin to let the assistant place images." },
+        { status: 422 },
+      );
+    }
     if (!selectedPath) {
       return NextResponse.json(
         { error: "Add an Anthropic API key in Admin to enable the assistant." },

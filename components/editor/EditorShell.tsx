@@ -53,6 +53,7 @@ export function EditorShell({
   const [advanced, setAdvanced] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
 
   const page = site.pages.find((p) => p.slug === pageSlug);
   const sections = page?.sections ?? [];
@@ -111,14 +112,64 @@ export function EditorShell({
     }
   }
 
-  async function sendToAssistant() {
-    if (!instruction.trim()) return;
-    const ok = await call("/api/agent", {
-      message: instruction,
-      pageSlug,
-      selectedPath,
-      advanced,
+  async function uploadToBlob(file: File) {
+    const kind: "image" | "video" = file.type.startsWith("video") ? "video" : "image";
+    const blob = await upload(file.name, file, {
+      access: "public",
+      handleUploadUrl: "/api/upload",
+      contentType: file.type,
     });
+    const dims = kind === "image" ? await imageDims(file).catch(() => ({})) : {};
+    return { url: blob.url, kind, ...dims } as {
+      url: string;
+      kind: "image" | "video";
+      width?: number;
+      height?: number;
+    };
+  }
+
+  async function sendToAssistant() {
+    if (!instruction.trim() && !attachedFile) return;
+
+    if (attachedFile) {
+      setUploading(true);
+      setMessage(null);
+      try {
+        const m = await uploadToBlob(attachedFile);
+        const dims = m.width ? { width: m.width, height: m.height } : {};
+        let ok: boolean;
+        if (selectedPath && kind === "media") {
+          // A media slot is selected → replace it directly.
+          ok = await call("/api/edit", {
+            op: "media",
+            path: selectedPath,
+            src: m.url,
+            kind: m.kind,
+            ...dims,
+          });
+        } else {
+          // Let the assistant place it on the section the message names.
+          ok = await call("/api/agent", {
+            message: instruction || "Place this image where I described.",
+            pageSlug,
+            selectedPath,
+            advanced,
+            attachment: { url: m.url, kind: m.kind },
+          });
+        }
+        if (ok) {
+          setInstruction("");
+          setAttachedFile(null);
+        }
+      } catch (err) {
+        setMessage({ text: (err as Error).message ?? "Upload failed.", error: true });
+      } finally {
+        setUploading(false);
+      }
+      return;
+    }
+
+    const ok = await call("/api/agent", { message: instruction, pageSlug, selectedPath, advanced });
     if (ok) setInstruction("");
   }
 
@@ -131,18 +182,13 @@ export function EditorShell({
     setUploading(true);
     setMessage(null);
     try {
-      const kind = file.type.startsWith("video") ? "video" : "image";
-      const blob = await upload(file.name, file, {
-        access: "public",
-        handleUploadUrl: "/api/upload",
-        contentType: file.type,
-      });
-      const dims = kind === "image" ? await imageDims(file).catch(() => ({})) : {};
+      const m = await uploadToBlob(file);
+      const dims = m.width ? { width: m.width, height: m.height } : {};
       await call("/api/edit", {
         op: "media",
         path: selectedPath,
-        src: blob.url,
-        kind,
+        src: m.url,
+        kind: m.kind,
         ...dims,
       });
     } catch (err) {
@@ -233,9 +279,41 @@ export function EditorShell({
               placeholder="e.g. make this headline punchier, or hide the reviews section"
               className={fieldCls}
             />
-            <button onClick={sendToAssistant} disabled={sending || !instruction.trim()} className={`${primaryBtn} mt-2 w-full`}>
-              {sending ? "Working…" : "Send to assistant"}
+            <div className="mt-2 flex items-center gap-2">
+              <label className="cursor-pointer rounded border border-zinc-300 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-50">
+                📎 Attach photo/video
+                <input
+                  type="file"
+                  accept="image/*,video/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) setAttachedFile(f);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              {attachedFile ? (
+                <span className="flex min-w-0 items-center gap-1 text-xs text-zinc-500">
+                  <span className="truncate">{attachedFile.name}</span>
+                  <button onClick={() => setAttachedFile(null)} className="shrink-0 underline">
+                    remove
+                  </button>
+                </span>
+              ) : null}
+            </div>
+            <button
+              onClick={sendToAssistant}
+              disabled={sending || uploading || (!instruction.trim() && !attachedFile)}
+              className={`${primaryBtn} mt-2 w-full`}
+            >
+              {uploading ? "Uploading…" : sending ? "Working…" : "Send to assistant"}
             </button>
+            {attachedFile ? (
+              <p className="mt-1 text-xs text-zinc-400">
+                Tip: select an image slot to replace it, or say where it should go (e.g. “use this as the hero background”).
+              </p>
+            ) : null}
             {message ? (
               <p className={`mt-2 text-sm ${message.error ? "text-red-600" : "text-green-700"}`}>{message.text}</p>
             ) : null}

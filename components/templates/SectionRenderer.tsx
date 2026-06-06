@@ -533,26 +533,43 @@ function Stats({ section, base }: { section: S<"stats">; base: string }) {
 
 // ────────────────────────────────────────────────────────────── ctaBanner ──
 function CtaBanner({ section, base }: { section: S<"ctaBanner">; base: string }) {
-  return (
-    <Band tone="surface">
-      <Container>
-        <div className="flex flex-col items-center gap-6 text-center">
-          <Editable as="h2" path={editPath(base, "heading")} className="font-heading text-4xl font-bold uppercase leading-[1.1] tracking-tight text-ink sm:text-6xl">
-            {section.heading}
+  const hasMedia = Boolean(section.media?.src);
+  const inner = (
+    <Container>
+      <div className="flex flex-col items-center gap-6 text-center">
+        <Editable as="h2" path={editPath(base, "heading")} className={`font-heading text-4xl font-bold uppercase leading-[1.1] tracking-tight sm:text-6xl ${hasMedia ? "text-white" : "text-ink"}`}>
+          {section.heading}
+        </Editable>
+        <AccentBar />
+        {section.body ? (
+          <Editable as="p" path={editPath(base, "body")} className={`max-w-xl text-lg ${hasMedia ? "text-white/90" : "text-muted"}`}>
+            {section.body}
           </Editable>
-          <AccentBar />
-          {section.body ? (
-            <Editable as="p" path={editPath(base, "body")} className="max-w-xl text-lg text-muted">
-              {section.body}
-            </Editable>
-          ) : null}
-          <div className="mt-2">
-            <CtaLink cta={section.cta} path={editPath(base, "cta")} />
-          </div>
+        ) : null}
+        <div className="mt-2">
+          <CtaLink cta={section.cta} path={editPath(base, "cta")} />
         </div>
-      </Container>
-    </Band>
+      </div>
+    </Container>
   );
+
+  if (hasMedia && section.media) {
+    return (
+      <section className="relative isolate overflow-hidden py-16 sm:py-20 lg:py-[100px]">
+        <div data-edit={editPath(base, "media")} className="absolute inset-0 -z-10">
+          {section.media.kind === "video" ? (
+            <video src={section.media.src} className="absolute inset-0 size-full object-cover" autoPlay muted loop playsInline />
+          ) : (
+            <Image src={section.media.src} alt={section.media.alt} fill sizes="100vw" className="object-cover" />
+          )}
+          <div aria-hidden className="absolute inset-0 bg-black/55" />
+        </div>
+        {inner}
+      </section>
+    );
+  }
+
+  return <Band tone="surface">{inner}</Band>;
 }
 
 // ──────────────────────────────────────────────────────────────── contact ──

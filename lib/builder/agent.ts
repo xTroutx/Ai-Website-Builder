@@ -6,6 +6,7 @@ import {
   setSectionHidden,
   moveSection,
   removeSection,
+  setSectionMedia,
 } from "./mutations";
 
 /**
@@ -25,6 +26,8 @@ export type RunAgentArgs = {
   selectedPath: string | null;
   advanced: boolean;
   site: Site;
+  /** An image/video the captain attached in chat, for the agent to place. */
+  attachment?: { url: string; kind: "image" | "video" } | null;
 };
 
 export type RunAgentResult = { site: Site; summary: string; changed: number };
@@ -98,6 +101,18 @@ const TOOLS: Anthropic.Tool[] = [
   },
 ];
 
+// Offered only when the captain attached an image/video.
+const PLACE_MEDIA_TOOL: Anthropic.Tool = {
+  name: "place_attached_media",
+  description:
+    "Place the user's ATTACHED image/video onto a section as its background/photo. Works for hero, mediaText, and ctaBanner sections (by section id). For a specific gallery/card image, the user should click that slot instead.",
+  input_schema: {
+    type: "object",
+    properties: { sectionId: { type: "string" } },
+    required: ["sectionId"],
+  },
+};
+
 function applyTool(
   site: Site,
   args: RunAgentArgs,
@@ -142,6 +157,13 @@ function applyTool(
       return moveSection(site, pageSlug, String(input.sectionId), input.direction === "up" ? -1 : 1);
     case "remove_section":
       return removeSection(site, pageSlug, String(input.sectionId));
+    case "place_attached_media": {
+      if (!args.attachment) throw new Error("No image is attached to place.");
+      return setSectionMedia(site, pageSlug, String(input.sectionId), {
+        src: args.attachment.url,
+        kind: args.attachment.kind,
+      });
+    }
     default:
       throw new Error(`Unknown tool "${name}".`);
   }
@@ -169,6 +191,9 @@ function buildContext(args: RunAgentArgs): string {
     `Selected element: ${selected}`,
     `Sections on this page:\n${sections || "  (none)"}`,
     `Advanced SEO: ${args.advanced ? "ON (you may edit SEO fields)" : "OFF (SEO is automatic; do not edit page title/description)"}`,
+    args.attachment
+      ? `Attached media: the user attached a ${args.attachment.kind} to place — use place_attached_media with the right section id (e.g. the hero or a cta).`
+      : "",
     "",
     `Captain's request: ${args.message}`,
   ].join("\n");
@@ -197,7 +222,7 @@ export async function runAgent(args: RunAgentArgs): Promise<RunAgentResult> {
       model: "claude-opus-4-8",
       max_tokens: 1024,
       system,
-      tools: TOOLS,
+      tools: args.attachment ? [...TOOLS, PLACE_MEDIA_TOOL] : TOOLS,
       messages,
     });
     messages.push({ role: "assistant", content: resp.content });

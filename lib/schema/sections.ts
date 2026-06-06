@@ -212,13 +212,15 @@ export const StatsSectionSchema = z.object({
     .min(1),
 });
 
-/** Full-width call-to-action banner. */
+/** Full-width call-to-action banner, optionally over a background image/video. */
 export const CtaBannerSectionSchema = z.object({
   ...base,
   type: z.literal("ctaBanner"),
   heading: z.string().min(1),
   body: z.string().optional(),
   cta: CtaSchema,
+  /** Optional background image/video behind the banner. */
+  media: MediaSchema.optional(),
 });
 
 /** Contact details and an optional lead form. */

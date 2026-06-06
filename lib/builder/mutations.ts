@@ -138,6 +138,44 @@ export function setMedia(
   return revalidate(next, `Set media "${path}"`);
 }
 
+/**
+ * Place or replace the single background image/video on a section that supports
+ * one (hero, mediaText, ctaBanner). Creates the media object if absent, deriving
+ * alt text from the section's heading. For galleries/cards (multiple images),
+ * select the specific slot and use setMedia instead.
+ */
+export function setSectionMedia(
+  site: Site,
+  pageSlug: string,
+  sectionId: string,
+  media: { src: string; kind: "image" | "video" },
+): Site {
+  const next = structuredClone(site);
+  const page = findPage(next, pageSlug);
+  const section = page.sections.find((s) => s.id === sectionId);
+  if (!section) throw new InvalidEditError(`No section "${sectionId}".`);
+  if (
+    section.type !== "hero" &&
+    section.type !== "mediaText" &&
+    section.type !== "ctaBanner"
+  ) {
+    throw new InvalidEditError(
+      `A "${section.type}" section doesn't take a single background image — select a specific image slot instead.`,
+    );
+  }
+  const existing = section.media;
+  const heading = section.type === "hero" ? section.headline : section.heading;
+  section.media = {
+    ...(existing ?? {}),
+    kind: media.kind,
+    src: media.src,
+    alt: existing?.alt || heading || "Site photo",
+    focalX: existing?.focalX ?? 0.5,
+    focalY: existing?.focalY ?? 0.5,
+  };
+  return revalidate(next, `Set media on "${sectionId}"`);
+}
+
 /** Remove a section from a page. */
 export function removeSection(
   site: Site,
