@@ -61,6 +61,15 @@ model Site {
   @@index([ownerId])
 }
 
+/// Platform-wide settings (single row, id = "global"). Holds the encrypted
+/// Anthropic API key managed from the admin console.
+model PlatformSettings {
+  id              String   @id @default("global")
+  /// AES-256-GCM encrypted Anthropic API key (never stored in plaintext).
+  anthropicKeyEnc String?
+  updatedAt       DateTime @updatedAt
+}
+
 /// A booking inquiry captured from a site's contact form.
 model Lead {
   id             String   @id @default(cuid())

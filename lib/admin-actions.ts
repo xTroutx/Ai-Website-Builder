@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { setSiteSuspended } from "./store-db";
+import { setAnthropicKey, clearAnthropicKey } from "./settings";
 
 async function requireAdmin(): Promise<void> {
   const session = await auth();
@@ -20,4 +21,17 @@ export async function toggleSuspendAction(formData: FormData): Promise<void> {
   await setSiteSuspended(siteId, suspended);
   revalidatePath("/admin");
   revalidatePath("/", "layout"); // reflect on the affected captain's site/editor
+}
+
+/** Admin-only: set or remove the platform Anthropic API key. */
+export async function saveAnthropicKeyAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const intent = String(formData.get("intent") ?? "save");
+  if (intent === "remove") {
+    await clearAnthropicKey();
+  } else {
+    const key = String(formData.get("apiKey") ?? "").trim();
+    if (key) await setAnthropicKey(key);
+  }
+  revalidatePath("/admin");
 }
