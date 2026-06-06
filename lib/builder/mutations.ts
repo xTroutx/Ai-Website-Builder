@@ -65,3 +65,63 @@ export function setContent(
 export function validateSite(data: unknown): Site {
   return parseSite(data);
 }
+
+// ── Section operations ───────────────────────────────────────────────────────
+
+function revalidate(candidate: unknown, ctx: string): Site {
+  const result = safeParseSite(candidate);
+  if (!result.success) {
+    throw new InvalidEditError(`${ctx} failed validation.`, result.error.issues);
+  }
+  return result.data;
+}
+
+function findPage(site: Site, pageSlug: string) {
+  const page = site.pages.find((p) => p.slug === pageSlug);
+  if (!page) throw new InvalidEditError(`No page "${pageSlug}".`);
+  return page;
+}
+
+/** Show or hide a section on a page. */
+export function setSectionHidden(
+  site: Site,
+  pageSlug: string,
+  sectionId: string,
+  hidden: boolean,
+): Site {
+  const next = structuredClone(site);
+  const page = findPage(next, pageSlug);
+  const section = page.sections.find((s) => s.id === sectionId);
+  if (!section) throw new InvalidEditError(`No section "${sectionId}".`);
+  section.hidden = hidden;
+  return revalidate(next, `Toggle section "${sectionId}"`);
+}
+
+/** Move a section up (-1) or down (+1) within its page. No-op at the ends. */
+export function moveSection(
+  site: Site,
+  pageSlug: string,
+  sectionId: string,
+  direction: -1 | 1,
+): Site {
+  const next = structuredClone(site);
+  const page = findPage(next, pageSlug);
+  const i = page.sections.findIndex((s) => s.id === sectionId);
+  const j = i + direction;
+  if (i >= 0 && j >= 0 && j < page.sections.length) {
+    [page.sections[i], page.sections[j]] = [page.sections[j], page.sections[i]];
+  }
+  return revalidate(next, `Move section "${sectionId}"`);
+}
+
+/** Remove a section from a page. */
+export function removeSection(
+  site: Site,
+  pageSlug: string,
+  sectionId: string,
+): Site {
+  const next = structuredClone(site);
+  const page = findPage(next, pageSlug);
+  page.sections = page.sections.filter((s) => s.id !== sectionId);
+  return revalidate(next, `Remove section "${sectionId}"`);
+}

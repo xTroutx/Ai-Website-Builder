@@ -2,73 +2,106 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getSite, saveSite } from "@/lib/site";
 import { getValueAtPath } from "@/lib/builder/paths";
-import { setContent, InvalidEditError } from "@/lib/builder/mutations";
+import {
+  setContent,
+  setSectionHidden,
+  moveSection,
+  removeSection,
+  InvalidEditError,
+} from "@/lib/builder/mutations";
 import { proposeEdit } from "@/lib/builder/ai";
 
 /**
- * Click-to-edit endpoint. The editor posts { path, instruction }; we:
- *   1. load the current site + the current value at `path`
- *   2. ask the AI (mock for now) to propose a new value for that one field
- *   3. apply it via setContent() — which re-validates the WHOLE site
- *   4. persist and return the new value
+ * The builder's edit endpoint. Gated by the proxy (logged-in captains only) and
+ * always scoped to the current account's site. Supported ops:
+ *   - { op: "ai",  path, instruction }     AI proposes a new value for a field
+ *   - { op: "set", path, value }           set a field to an exact value (no AI)
+ *   - { op: "section", action, pageSlug, sectionId }   hide/show/up/down/remove
  *
- * The AI never writes the JSON. It proposes a value; setContent + Zod decide
- * whether it's allowed to take effect.
+ * Every change goes through a Zod-validated mutation, so invalid edits never save.
  */
 export async function POST(request: Request) {
-  let body: { path?: unknown; instruction?: unknown };
+  let body: Record<string, unknown>;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const { path, instruction } = body;
-  if (typeof path !== "string" || typeof instruction !== "string" || !path || !instruction.trim()) {
-    return NextResponse.json(
-      { error: "Both `path` and `instruction` are required strings." },
-      { status: 400 },
-    );
-  }
-
+  const op = body.op;
   const site = await getSite();
 
-  const currentValue = getValueAtPath(site, path);
-  if (currentValue === undefined) {
-    return NextResponse.json(
-      { error: `No editable field at "${path}".` },
-      { status: 404 },
-    );
-  }
-  if (typeof currentValue === "object" && currentValue !== null) {
-    return NextResponse.json(
-      { error: `"${path}" is a structured field; editing it isn't supported yet.` },
-      { status: 422 },
-    );
-  }
-
   try {
-    const proposal = await proposeEdit({
-      path,
-      currentValue: currentValue as string | number,
-      instruction,
-    });
-    const updated = setContent(site, path, proposal.value);
-    await saveSite(updated);
-    // Content lives in nav/footer/profile/any page, so refresh everything.
-    revalidatePath("/", "layout");
-    return NextResponse.json({
-      ok: true,
-      path,
-      value: proposal.value,
-      note: proposal.note,
-    });
+    if (op === "ai") {
+      const { path, instruction } = body as { path?: string; instruction?: string };
+      if (!path || !instruction?.trim()) {
+        return NextResponse.json({ error: "path and instruction required." }, { status: 400 });
+      }
+      const current = getValueAtPath(site, path);
+      if (current === undefined) {
+        return NextResponse.json({ error: `No field at "${path}".` }, { status: 404 });
+      }
+      if (typeof current === "object" && current !== null) {
+        return NextResponse.json({ error: "That field isn't editable text." }, { status: 422 });
+      }
+      const proposal = await proposeEdit({
+        path,
+        currentValue: current as string | number,
+        instruction,
+      });
+      await saveSite(setContent(site, path, proposal.value));
+      revalidatePath("/", "layout");
+      return NextResponse.json({ ok: true, value: proposal.value, note: proposal.note });
+    }
+
+    if (op === "set") {
+      const { path, value } = body as { path?: string; value?: string | number };
+      if (!path || (typeof value !== "string" && typeof value !== "number")) {
+        return NextResponse.json({ error: "path and value required." }, { status: 400 });
+      }
+      await saveSite(setContent(site, path, value));
+      revalidatePath("/", "layout");
+      return NextResponse.json({ ok: true, value });
+    }
+
+    if (op === "section") {
+      const { action, pageSlug, sectionId } = body as {
+        action?: string;
+        pageSlug?: string;
+        sectionId?: string;
+      };
+      if (!action || !pageSlug || !sectionId) {
+        return NextResponse.json({ error: "action, pageSlug, sectionId required." }, { status: 400 });
+      }
+      let updated;
+      switch (action) {
+        case "hide":
+          updated = setSectionHidden(site, pageSlug, sectionId, true);
+          break;
+        case "show":
+          updated = setSectionHidden(site, pageSlug, sectionId, false);
+          break;
+        case "up":
+          updated = moveSection(site, pageSlug, sectionId, -1);
+          break;
+        case "down":
+          updated = moveSection(site, pageSlug, sectionId, 1);
+          break;
+        case "remove":
+          updated = removeSection(site, pageSlug, sectionId);
+          break;
+        default:
+          return NextResponse.json({ error: `Unknown action "${action}".` }, { status: 400 });
+      }
+      await saveSite(updated);
+      revalidatePath("/", "layout");
+      return NextResponse.json({ ok: true });
+    }
+
+    return NextResponse.json({ error: `Unknown op "${String(op)}".` }, { status: 400 });
   } catch (err) {
     if (err instanceof InvalidEditError) {
-      return NextResponse.json(
-        { error: err.message, issues: err.issues },
-        { status: 422 },
-      );
+      return NextResponse.json({ error: err.message, issues: err.issues }, { status: 422 });
     }
     return NextResponse.json(
       { error: (err as Error).message ?? "Edit failed." },

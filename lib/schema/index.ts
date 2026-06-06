@@ -58,3 +58,8 @@ export function getSingletonPage(
 export function getPagesOfType(site: Site, pageType: PageType): Page[] {
   return site.pages.filter((p) => p.pageType === pageType);
 }
+
+/** Find a page by its slug (used by the editor's page switcher). */
+export function getPageBySlug(site: Site, slug: string): Page | undefined {
+  return site.pages.find((p) => p.slug === slug);
+}

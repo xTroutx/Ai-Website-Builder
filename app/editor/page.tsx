@@ -1,32 +1,54 @@
 import type { Metadata } from "next";
 import { getSite, isCurrentSiteSuspended } from "@/lib/site";
-import { getHomePage } from "@/lib/schema";
+import { getHomePage, getPageBySlug, type Page } from "@/lib/schema";
 import { PageRenderer } from "@/components/templates/PageRenderer";
 import { EditorShell } from "@/components/editor/EditorShell";
 import { SuspendedNotice } from "@/components/SuspendedNotice";
 
-// The editor is a private tool surface — never index it.
 export const metadata: Metadata = {
   title: "FishySites Editor",
   robots: { index: false, follow: false },
 };
 
-// Always render the latest working copy (so edits show immediately).
 export const dynamic = "force-dynamic";
 
-/**
- * Click-to-edit editor for the home page. Renders the real templates as a live
- * preview inside the editor shell; every editable element already carries its
- * data-edit path, so the shell can target the chat at exactly the right field.
- */
-export default async function EditorPage() {
-  if (await isCurrentSiteSuspended()) {
-    return <SuspendedNotice showDashboardLink />;
+function pageLabel(page: Page): string {
+  switch (page.pageType) {
+    case "home":
+      return "Home";
+    case "about":
+      return "About";
+    case "faq":
+      return "FAQ";
+    case "contact":
+      return "Contact";
+    case "trip":
+      return `Trip · ${page.slug}`;
+    case "species":
+      return `Species · ${page.slug}`;
+    case "location":
+      return `Location · ${page.slug}`;
+    case "report":
+      return `Report · ${page.slug}`;
   }
+}
+
+export default async function EditorPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  if (await isCurrentSiteSuspended()) return <SuspendedNotice showDashboardLink />;
+
   const site = await getSite();
-  const page = getHomePage(site);
+  const { page: pageParam } = await searchParams;
+  const page =
+    (pageParam ? getPageBySlug(site, pageParam) : undefined) ?? getHomePage(site);
+
+  const pages = site.pages.map((p) => ({ slug: p.slug, label: pageLabel(p) }));
+
   return (
-    <EditorShell pageLabel="Home" liveHref="/">
+    <EditorShell key={page.slug} site={site} pageSlug={page.slug} pages={pages}>
       <PageRenderer site={site} page={page} />
     </EditorShell>
   );
