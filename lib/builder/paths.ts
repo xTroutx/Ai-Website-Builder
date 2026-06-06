@@ -93,3 +93,17 @@ export function isEditableScalar(site: Site, path: string): boolean {
   const v = getValueAtPath(site, path);
   return typeof v === "string" || typeof v === "number";
 }
+
+/**
+ * Technical SEO + identity fields that FishySites manages automatically and
+ * captains may NOT edit directly (the page <title>, meta description, JSON-LD
+ * type, keywords, canonical slug, OG image, and the site slug/base URL). The
+ * visible page H1 (`seo.h1`) is intentionally NOT protected — it's on-page copy.
+ */
+const PROTECTED_SEO =
+  /\.seo\.(titleTag|metaDescription|jsonLdType|keywords|canonicalSlug|ogImage)\b/;
+
+export function isProtectedPath(path: string): boolean {
+  if (path === "slug" || path === "baseUrl") return true;
+  return PROTECTED_SEO.test(path);
+}

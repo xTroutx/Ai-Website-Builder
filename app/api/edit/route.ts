@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getSite, saveSite } from "@/lib/site";
-import { getValueAtPath } from "@/lib/builder/paths";
+import { getValueAtPath, isProtectedPath } from "@/lib/builder/paths";
 import {
   setContent,
   setSectionHidden,
@@ -10,6 +10,9 @@ import {
   InvalidEditError,
 } from "@/lib/builder/mutations";
 import { proposeEdit } from "@/lib/builder/ai";
+
+const SEO_LOCKED =
+  "Page SEO (title, description, and search data) is optimized automatically by FishySites. Turn on Advanced SEO to edit it directly.";
 
 /**
  * The builder's edit endpoint. Gated by the proxy (logged-in captains only) and
@@ -29,6 +32,8 @@ export async function POST(request: Request) {
   }
 
   const op = body.op;
+  // SEO is platform-managed by default; an "Advanced SEO" toggle opts in.
+  const advanced = body.advanced === true;
   const site = await getSite();
 
   try {
@@ -36,6 +41,9 @@ export async function POST(request: Request) {
       const { path, instruction } = body as { path?: string; instruction?: string };
       if (!path || !instruction?.trim()) {
         return NextResponse.json({ error: "path and instruction required." }, { status: 400 });
+      }
+      if (isProtectedPath(path) && !advanced) {
+        return NextResponse.json({ error: SEO_LOCKED }, { status: 422 });
       }
       const current = getValueAtPath(site, path);
       if (current === undefined) {
@@ -58,6 +66,9 @@ export async function POST(request: Request) {
       const { path, value } = body as { path?: string; value?: string | number };
       if (!path || (typeof value !== "string" && typeof value !== "number")) {
         return NextResponse.json({ error: "path and value required." }, { status: 400 });
+      }
+      if (isProtectedPath(path) && !advanced) {
+        return NextResponse.json({ error: SEO_LOCKED }, { status: 422 });
       }
       await saveSite(setContent(site, path, value));
       revalidatePath("/", "layout");
