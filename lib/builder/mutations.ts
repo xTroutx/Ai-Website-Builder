@@ -323,3 +323,71 @@ export function removeSection(
   page.sections = page.sections.filter((s) => s.id !== sectionId);
   return revalidate(next, `Remove section "${sectionId}"`);
 }
+
+// ── List item operations ──────────────────────────────────────────────────
+
+/**
+ * Resolve a data-edit path to the list it refers to (the list itself, or the
+ * list that contains the addressed item/field). Rate-table cells resolve to the
+ * row/column lists so add/remove operate on whole rows or columns, not cells.
+ */
+function arrayContext(path: string): { arrayPath: string; index: number | null } {
+  let m = path.match(/^(.*\.rows)\.(\d+)/);
+  if (m) return { arrayPath: m[1], index: Number(m[2]) };
+  m = path.match(/^(.*\.columns)\.(\d+)/);
+  if (m) return { arrayPath: m[1], index: Number(m[2]) };
+  const segs = path.split(".");
+  for (let i = segs.length - 1; i >= 0; i--) {
+    if (/^\d+$/.test(segs[i])) {
+      return { arrayPath: segs.slice(0, i).join("."), index: Number(segs[i]) };
+    }
+  }
+  return { arrayPath: path, index: null };
+}
+
+const rowsSiblingOf = (columnsPath: string) => columnsPath.replace(/\.columns$/, ".rows");
+
+/** Keep each rate row's `values` length in sync when a column is added/removed. */
+function syncColumnValues(site: Site, columnsPath: string, removeAt: number | null): Site {
+  const rowsPath = rowsSiblingOf(columnsPath);
+  const rows = getValueAtPath(site, rowsPath);
+  if (!Array.isArray(rows)) return site;
+  const next = rows.map((r) => {
+    const row = r as { values?: string[] };
+    const vals = Array.isArray(row.values) ? [...row.values] : [];
+    if (removeAt === null) vals.push(vals[vals.length - 1] ?? "—");
+    else vals.splice(removeAt, 1);
+    return { ...row, values: vals };
+  });
+  return setValueAtPath(site, rowsPath, next);
+}
+
+/**
+ * Append an item to the list at (or containing) `path`. New items copy the last
+ * item's shape — a placeholder string for text lists, a clone for object lists —
+ * so the result is always valid; the captain then edits it.
+ */
+export function addArrayItem(site: Site, path: string): Site {
+  const { arrayPath } = arrayContext(path);
+  const arr = getValueAtPath(site, arrayPath);
+  if (!Array.isArray(arr)) throw new InvalidEditError(`"${arrayPath}" is not a list.`);
+  if (arr.length === 0) throw new InvalidEditError(`Can't add to an empty list.`);
+  const last = arr[arr.length - 1];
+  const item =
+    typeof last === "string" ? "New item" : typeof last === "number" ? 0 : structuredClone(last);
+  let updated = setValueAtPath(site, arrayPath, [...arr, item]);
+  if (arrayPath.endsWith(".columns")) updated = syncColumnValues(updated, arrayPath, null);
+  return revalidate(updated, `Add item to "${arrayPath}"`);
+}
+
+/** Remove the item the `path` addresses from its list (kept to at least one item). */
+export function removeArrayItem(site: Site, path: string): Site {
+  const { arrayPath, index } = arrayContext(path);
+  if (index === null) throw new InvalidEditError(`Select a specific item to remove.`);
+  const arr = getValueAtPath(site, arrayPath);
+  if (!Array.isArray(arr)) throw new InvalidEditError(`"${arrayPath}" is not a list.`);
+  if (arr.length <= 1) throw new InvalidEditError(`This list must keep at least one item.`);
+  let updated = setValueAtPath(site, arrayPath, arr.filter((_, i) => i !== index));
+  if (arrayPath.endsWith(".columns")) updated = syncColumnValues(updated, arrayPath, index);
+  return revalidate(updated, `Remove item from "${arrayPath}"`);
+}

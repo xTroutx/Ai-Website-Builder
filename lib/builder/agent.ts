@@ -9,6 +9,8 @@ import {
   setSectionMedia,
   setSectionAlign,
   addSection,
+  addArrayItem,
+  removeArrayItem,
   ADDABLE_SECTION_TYPES,
 } from "./mutations";
 
@@ -128,6 +130,26 @@ const TOOLS: Anthropic.Tool[] = [
       required: ["sectionType"],
     },
   },
+  {
+    name: "add_list_item",
+    description:
+      "Add a new item to a repeating LIST (e.g. another 'what's included' line, an extra rate-table row, an additional card, a gallery photo, an FAQ entry). Pass the data-edit `path` of the list or of any item in it — usually the SELECTED element's path. The new item copies the last one's shape; tell the user to edit it.",
+    input_schema: {
+      type: "object",
+      properties: { path: { type: "string" } },
+      required: ["path"],
+    },
+  },
+  {
+    name: "remove_list_item",
+    description:
+      "Remove an item from a repeating list. Pass the data-edit `path` of the item to remove (usually the SELECTED element's path). A list always keeps at least one item.",
+    input_schema: {
+      type: "object",
+      properties: { path: { type: "string" } },
+      required: ["path"],
+    },
+  },
 ];
 
 // Offered only when the captain attached an image/video.
@@ -195,6 +217,18 @@ function applyTool(
         String(input.sectionType),
         input.afterSectionId ? String(input.afterSectionId) : undefined,
       );
+    case "add_list_item": {
+      const path = String(input.path || selectedPath || "");
+      if (!path) throw new Error("No list path or selected element to add to.");
+      guardSeo(path);
+      return addArrayItem(site, path);
+    }
+    case "remove_list_item": {
+      const path = String(input.path || selectedPath || "");
+      if (!path) throw new Error("No list item path or selected element to remove.");
+      guardSeo(path);
+      return removeArrayItem(site, path);
+    }
     case "place_attached_media": {
       if (!args.attachment) throw new Error("No image is attached to place.");
       return setSectionMedia(site, pageSlug, String(input.sectionId), {

@@ -12,6 +12,8 @@ import {
   setSectionBackgroundMedia,
   setSectionAlign,
   addSection,
+  addArrayItem,
+  removeArrayItem,
   InvalidEditError,
 } from "@/lib/builder/mutations";
 import { proposeEdit } from "@/lib/builder/ai";
@@ -127,6 +129,23 @@ export async function POST(request: Request) {
         default:
           return NextResponse.json({ error: `Unknown action "${action}".` }, { status: 400 });
       }
+      await saveSite(updated);
+      revalidatePath("/", "layout");
+      return NextResponse.json({ ok: true });
+    }
+
+    if (op === "array") {
+      const { action, path } = body as { action?: string; path?: string };
+      if (!action || !path) {
+        return NextResponse.json({ error: "action and path required." }, { status: 400 });
+      }
+      if (isProtectedPath(path) && !advanced) {
+        return NextResponse.json({ error: SEO_LOCKED }, { status: 422 });
+      }
+      let updated;
+      if (action === "add") updated = addArrayItem(site, path);
+      else if (action === "remove") updated = removeArrayItem(site, path);
+      else return NextResponse.json({ error: `Unknown action "${action}".` }, { status: 400 });
       await saveSite(updated);
       revalidatePath("/", "layout");
       return NextResponse.json({ ok: true });

@@ -277,6 +277,15 @@ export function EditorShell({
     });
   }
 
+  function addListItem() {
+    if (!selectedPath) return;
+    void call("/api/edit", { op: "array", action: "add", path: selectedPath, advanced });
+  }
+  function removeListItem() {
+    if (!selectedPath) return;
+    void call("/api/edit", { op: "array", action: "remove", path: selectedPath, advanced });
+  }
+
   async function uploadSectionBg(file: File) {
     if (!selectedSectionId) return;
     setUploading(true);
@@ -396,6 +405,28 @@ export function EditorShell({
             {message ? (
               <p className={`mt-2 text-sm ${message.error ? "text-red-600" : "text-green-700"}`}>{message.text}</p>
             ) : null}
+
+            {/* List items (add/remove) when the selection sits inside a list */}
+            {(() => {
+              const lc = listContextOf(selectedPath);
+              if (!lc) return null;
+              return (
+                <div className="mt-3 flex flex-wrap gap-2 border-t border-zinc-100 pt-3">
+                  <button onClick={addListItem} disabled={sending} className={secondaryBtn}>
+                    + Add {lc.noun}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (confirm(`Remove this ${lc.noun}?`)) removeListItem();
+                    }}
+                    disabled={sending}
+                    className="rounded-md border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    Remove {lc.noun}
+                  </button>
+                </div>
+              );
+            })()}
 
             {/* Headline education */}
             {selectedPath && /(\.headline|\.seo\.h1|\.heading)$/.test(selectedPath) ? (
@@ -648,6 +679,38 @@ export function EditorShell({
       </aside>
     </div>
   );
+}
+
+/** Friendly singular nouns for list add/remove buttons, keyed by the array field name. */
+const LIST_NOUNS: Record<string, string> = {
+  items: "item",
+  images: "photo",
+  cards: "card",
+  trips: "trip",
+  species: "destination",
+  tiers: "tier",
+  features: "feature",
+  included: "item",
+  body: "paragraph",
+  details: "detail",
+  rows: "row",
+  columns: "column",
+  values: "column",
+};
+
+/** Whether the selected path is inside an editable list, and a noun for the buttons. */
+function listContextOf(path: string | null): { noun: string } | null {
+  if (!path) return null;
+  if (/\.rows\.\d+/.test(path)) return { noun: "row" };
+  if (/\.columns\.\d+/.test(path)) return { noun: "column" };
+  const segs = path.split(".");
+  for (let i = segs.length - 1; i >= 0; i--) {
+    if (/^\d+$/.test(segs[i])) {
+      const name = segs[i - 1] ?? "item";
+      return { noun: LIST_NOUNS[name] ?? name.replace(/s$/, "") };
+    }
+  }
+  return null;
 }
 
 /** Section types a captain can add, with friendly labels (mirrors the server factory). */
