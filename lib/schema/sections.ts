@@ -268,6 +268,126 @@ export const ArticleBodySectionSchema = z.object({
 });
 
 /**
+ * A pricing matrix: column headers + labelled rows of values — e.g. columns
+ * ["1 Angler","2 Anglers"] with rows {label:"Half day", values:["$350","$450"]}.
+ * Shared by the rateTable section and pricedOffering blocks.
+ */
+export const RateMatrixSchema = z.object({
+  columns: z.array(z.string().min(1)).min(1),
+  rows: z
+    .array(
+      z.object({
+        label: z.string().min(1),
+        values: z.array(z.string().min(1)).min(1),
+      }),
+    )
+    .min(1),
+  /** Small print under the table (e.g. "Prices per boat. Gratuity not included."). */
+  note: z.string().optional(),
+});
+export type RateMatrix = z.infer<typeof RateMatrixSchema>;
+
+/**
+ * Generic rich card grid/carousel: cards with an image, optional kicker, title,
+ * body, labelled detail rows, and a CTA. The design's recurring card pattern —
+ * fishing waters, lodging options, hosted weeks, the guide team.
+ */
+export const MediaCardsSectionSchema = z.object({
+  ...base,
+  type: z.literal("mediaCards"),
+  heading: z.string().optional(),
+  intro: z.string().optional(),
+  /** Lay the cards out as a wrapping grid or a horizontal carousel. */
+  layout: z.enum(["grid", "carousel"]).default("grid"),
+  /** Cards per row at desktop width. */
+  columns: z.union([z.literal(2), z.literal(3), z.literal(4)]).default(3),
+  cards: z
+    .array(
+      z.object({
+        media: MediaSchema.optional(),
+        /** Small uppercase label above the title (e.g. "FLOAT TRIP WATERS"). */
+        eyebrow: z.string().optional(),
+        title: z.string().min(1),
+        body: z.string().optional(),
+        /** Labelled spec rows (e.g. "Best season" → "Apr–Oct"). */
+        details: z
+          .array(z.object({ label: z.string().min(1), value: z.string().min(1) }))
+          .default([]),
+        cta: CtaSchema.optional(),
+      }),
+    )
+    .min(1),
+});
+
+/** A list of included/checkmarked items, laid out in one or more columns. */
+export const ChecklistSectionSchema = z.object({
+  ...base,
+  type: z.literal("checklist"),
+  heading: z.string().optional(),
+  intro: z.string().optional(),
+  columns: z.union([z.literal(1), z.literal(2), z.literal(3)]).default(2),
+  items: z.array(z.string().min(1)).min(1),
+});
+
+/** A standalone pricing matrix (column headers + labelled rate rows). */
+export const RateTableSectionSchema = z.object({
+  ...base,
+  type: z.literal("rateTable"),
+  heading: z.string().optional(),
+  intro: z.string().optional(),
+  table: RateMatrixSchema,
+});
+
+/**
+ * A priced offering block: copy + CTAs on one side, a rate table and an
+ * "what's included" checklist on the other (the design's Float/Walk-&-Wade trip
+ * detail layout). `media` can stand in for the text column when provided.
+ */
+export const PricedOfferingSectionSchema = z.object({
+  ...base,
+  type: z.literal("pricedOffering"),
+  eyebrow: z.string().optional(),
+  heading: z.string().min(1),
+  body: z.array(z.string().min(1)).default([]),
+  media: MediaSchema.optional(),
+  /** Which side the rate/included column sits on. */
+  detailsSide: z.enum(["left", "right"]).default("right"),
+  primaryCta: CtaSchema.optional(),
+  secondaryCta: CtaSchema.optional(),
+  rate: RateMatrixSchema.optional(),
+  includedTitle: z.string().optional(),
+  included: z.array(z.string().min(1)).default([]),
+});
+
+/** Numbered/kickered process steps (e.g. "What to Expect", "Planning Your Trip"). */
+export const StepsSectionSchema = z.object({
+  ...base,
+  type: z.literal("steps"),
+  heading: z.string().optional(),
+  intro: z.string().optional(),
+  items: z
+    .array(
+      z.object({
+        /** Small label above the title (e.g. "STEP 01 — MORNING"). */
+        kicker: z.string().optional(),
+        title: z.string().min(1),
+        body: z.string().min(1),
+      }),
+    )
+    .min(1),
+});
+
+/** An embedded location map (derived from the business address, or an explicit URL). */
+export const MapSectionSchema = z.object({
+  ...base,
+  type: z.literal("map"),
+  heading: z.string().optional(),
+  intro: z.string().optional(),
+  /** Explicit map embed URL; otherwise derived from the business address. */
+  embedUrl: z.url().optional(),
+});
+
+/**
  * The Section discriminated union. Order of members doesn't matter; the `type`
  * literal is the discriminant.
  */
@@ -287,6 +407,12 @@ export const SectionSchema = z.discriminatedUnion("type", [
   CtaBannerSectionSchema,
   ContactSectionSchema,
   ArticleBodySectionSchema,
+  MediaCardsSectionSchema,
+  ChecklistSectionSchema,
+  RateTableSectionSchema,
+  PricedOfferingSectionSchema,
+  StepsSectionSchema,
+  MapSectionSchema,
 ]);
 
 export type Section = z.infer<typeof SectionSchema>;

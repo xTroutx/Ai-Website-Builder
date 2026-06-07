@@ -58,6 +58,18 @@ export function HolstenSectionRenderer({
       return <Contact section={section} base={base} site={site} />;
     case "articleBody":
       return <ArticleBody section={section} base={base} />;
+    case "mediaCards":
+      return <MediaCards section={section} base={base} />;
+    case "checklist":
+      return <Checklist section={section} base={base} />;
+    case "rateTable":
+      return <RateTable section={section} base={base} />;
+    case "pricedOffering":
+      return <PricedOffering section={section} base={base} />;
+    case "steps":
+      return <Steps section={section} base={base} />;
+    case "map":
+      return <MapBlock section={section} base={base} site={site} />;
     default: {
       const _exhaustive: never = section;
       return _exhaustive;
@@ -810,6 +822,291 @@ function ArticleBody({ section, base }: { section: S<"articleBody">; base: strin
           ))}
         </article>
       </Container>
+    </Band>
+  );
+}
+
+// ── shared helpers for the richer sections ──────────────────────────────────
+
+function CheckIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={["size-4 shrink-0", className ?? ""].join(" ")} aria-hidden>
+      <path d="m20 6-11 11-5-5" />
+    </svg>
+  );
+}
+
+/** Optional section heading + intro paragraph, in the design's rhythm. */
+function Intro({ heading, intro, base, center }: { heading?: string; intro?: string; base: string; center?: boolean }) {
+  if (!heading && !intro) return null;
+  return (
+    <div className={["mb-12 flex flex-col gap-4", center ? "items-center text-center" : ""].join(" ")}>
+      {heading ? <Heading text={heading} path={editPath(base, "heading")} center={center} /> : null}
+      {intro ? (
+        <Editable as="p" path={editPath(base, "intro")} className="max-w-2xl text-lg leading-relaxed opacity-90">
+          {intro}
+        </Editable>
+      ) : null}
+    </div>
+  );
+}
+
+const GRID_COLS: Record<number, string> = {
+  2: "sm:grid-cols-2",
+  3: "sm:grid-cols-2 lg:grid-cols-3",
+  4: "sm:grid-cols-2 lg:grid-cols-4",
+};
+
+/** A column-header + labelled-row pricing matrix. Inherits surrounding text color. */
+function RateMatrixTable({ table, path }: { table: import("@/lib/schema").RateMatrix; path: string }) {
+  return (
+    <div data-edit={path}>
+      <table className="w-full border-collapse text-left text-sm">
+        <thead>
+          <tr className="border-b border-current/20">
+            <th className="py-2 pr-4 font-heading text-base font-bold uppercase tracking-wide">&nbsp;</th>
+            {table.columns.map((c, i) => (
+              <th key={i} className="py-2 pl-4 text-right font-heading text-base font-bold uppercase tracking-wide text-primary">
+                {c}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {table.rows.map((row, ri) => (
+            <tr key={ri} className="border-b border-current/10 last:border-0">
+              <td className="py-2.5 pr-4 font-medium">{row.label}</td>
+              {row.values.map((v, vi) => (
+                <td key={vi} className="py-2.5 pl-4 text-right tabular-nums">{v}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {table.note ? <p className="mt-3 text-xs opacity-60">{table.note}</p> : null}
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────── mediaCards ──
+function MediaCards({ section, base }: { section: S<"mediaCards">; base: string }) {
+  const cards = section.cards.map((card, i) => {
+    const cBase = editPath(base, "cards", i);
+    return (
+      <article
+        key={i}
+        className={[
+          "flex flex-col overflow-hidden rounded-theme bg-surface",
+          section.layout === "carousel" ? "w-[300px] shrink-0 snap-start sm:w-[340px]" : "",
+        ].join(" ")}
+      >
+        {card.media ? (
+          <MediaPlaceholder media={card.media} path={editPath(cBase, "media")} ratio="3 / 2" rounded={false} />
+        ) : null}
+        <div className="flex flex-1 flex-col gap-3 p-6">
+          {card.eyebrow ? (
+            <Editable as="p" path={editPath(cBase, "eyebrow")} className="font-body text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+              {card.eyebrow}
+            </Editable>
+          ) : null}
+          <Editable as="h3" path={editPath(cBase, "title")} className="font-heading text-xl font-bold uppercase">
+            {card.title}
+          </Editable>
+          {card.body ? (
+            <Editable as="p" path={editPath(cBase, "body")} className="text-sm leading-relaxed text-muted">
+              {card.body}
+            </Editable>
+          ) : null}
+          {card.details.length ? (
+            <dl className="mt-1 flex flex-col gap-1.5 border-t border-line pt-3 text-sm">
+              {card.details.map((d, di) => (
+                <div key={di} className="flex justify-between gap-4">
+                  <dt className="text-muted">{d.label}</dt>
+                  <dd className="text-right font-medium">{d.value}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : null}
+          {card.cta ? (
+            <div className="mt-auto pt-3">
+              <CtaLink cta={card.cta} path={editPath(cBase, "cta")} className="!px-0 !py-0 text-primary" />
+            </div>
+          ) : null}
+        </div>
+      </article>
+    );
+  });
+
+  return (
+    <Band bg={section.background} anchor={base}>
+      <Container>
+        <Intro heading={section.heading} intro={section.intro} base={base} />
+        {section.layout === "carousel" ? (
+          <div className="-mx-1 flex snap-x gap-6 overflow-x-auto px-1 pb-4">{cards}</div>
+        ) : (
+          <div className={["grid gap-6", GRID_COLS[section.columns]].join(" ")}>{cards}</div>
+        )}
+      </Container>
+    </Band>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────── checklist ──
+function Checklist({ section, base }: { section: S<"checklist">; base: string }) {
+  return (
+    <Band tone="surface" bg={section.background} anchor={base}>
+      <Container>
+        <Intro heading={section.heading} intro={section.intro} base={base} />
+        <ul className={["grid gap-x-10 gap-y-3", GRID_COLS[section.columns] ?? ""].join(" ")}>
+          {section.items.map((item, i) => (
+            <li key={i} className="flex items-start gap-3">
+              <CheckIcon className="mt-1 text-primary" />
+              <Editable as="span" path={editPath(base, "items", i)} className="leading-relaxed">
+                {item}
+              </Editable>
+            </li>
+          ))}
+        </ul>
+      </Container>
+    </Band>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────── rateTable ──
+function RateTable({ section, base }: { section: S<"rateTable">; base: string }) {
+  return (
+    <Band bg={section.background} anchor={base}>
+      <Container>
+        <Intro heading={section.heading} intro={section.intro} base={base} />
+        <div className="mx-auto max-w-2xl rounded-theme bg-surface p-7">
+          <RateMatrixTable table={section.table} path={editPath(base, "table")} />
+        </div>
+      </Container>
+    </Band>
+  );
+}
+
+// ─────────────────────────────────────────────────────────── pricedOffering ──
+function PricedOffering({ section, base }: { section: S<"pricedOffering">; base: string }) {
+  const detailsRight = section.detailsSide === "right";
+  const textCol = (
+    <div className="flex flex-col gap-6">
+      {section.eyebrow ? <Eyebrow text={section.eyebrow} path={editPath(base, "eyebrow")} /> : null}
+      <Heading text={section.heading} path={editPath(base, "heading")} />
+      {section.media ? (
+        <MediaPlaceholder media={section.media} path={editPath(base, "media")} ratio="3 / 2" rounded={false} />
+      ) : null}
+      {section.body.length ? (
+        <div className="flex flex-col gap-4">
+          {section.body.map((para, i) => (
+            <Editable key={i} as="p" path={editPath(base, "body", i)} className="leading-relaxed opacity-90">
+              {para}
+            </Editable>
+          ))}
+        </div>
+      ) : null}
+      {section.primaryCta || section.secondaryCta ? (
+        <div className="flex flex-wrap gap-4">
+          {section.primaryCta ? <CtaLink cta={section.primaryCta} path={editPath(base, "primaryCta")} /> : null}
+          {section.secondaryCta ? <CtaLink cta={section.secondaryCta} path={editPath(base, "secondaryCta")} /> : null}
+        </div>
+      ) : null}
+    </div>
+  );
+  const detailsCol = (
+    <div className="flex flex-col gap-6">
+      {section.rate ? (
+        <div className="rounded-theme bg-surface p-7">
+          <RateMatrixTable table={section.rate} path={editPath(base, "rate")} />
+        </div>
+      ) : null}
+      {section.included.length ? (
+        <div className="rounded-theme border border-line p-7">
+          <Editable
+            as="h3"
+            path={editPath(base, "includedTitle")}
+            className="mb-4 font-heading text-lg font-bold uppercase"
+          >
+            {section.includedTitle ?? "What's Included"}
+          </Editable>
+          <ul className="flex flex-col gap-2.5 text-sm">
+            {section.included.map((item, i) => (
+              <li key={i} className="flex items-start gap-3">
+                <CheckIcon className="mt-0.5 text-primary" />
+                <Editable as="span" path={editPath(base, "included", i)} className="leading-relaxed">
+                  {item}
+                </Editable>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
+  return (
+    <Band bg={section.background} anchor={base}>
+      <Container>
+        <div className="grid items-start gap-10 lg:grid-cols-2 lg:gap-16">
+          <div className={detailsRight ? "lg:order-1" : "lg:order-2"}>{textCol}</div>
+          <div className={detailsRight ? "lg:order-2" : "lg:order-1"}>{detailsCol}</div>
+        </div>
+      </Container>
+    </Band>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────── steps ──
+function Steps({ section, base }: { section: S<"steps">; base: string }) {
+  const cols = section.items.length >= 4 ? "sm:grid-cols-2 lg:grid-cols-4" : section.items.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2";
+  return (
+    <Band bg={section.background} anchor={base}>
+      <Container>
+        <Intro heading={section.heading} intro={section.intro} base={base} />
+        <div className={["grid gap-8", cols].join(" ")}>
+          {section.items.map((item, i) => (
+            <div key={i} className="flex flex-col gap-3 border-t-2 border-primary pt-5">
+              {item.kicker ? (
+                <Editable as="p" path={editPath(base, "items", i, "kicker")} className="font-body text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                  {item.kicker}
+                </Editable>
+              ) : null}
+              <Editable as="h3" path={editPath(base, "items", i, "title")} className="font-heading text-xl font-bold uppercase">
+                {item.title}
+              </Editable>
+              <Editable as="p" path={editPath(base, "items", i, "body")} className="text-sm leading-relaxed text-muted">
+                {item.body}
+              </Editable>
+            </div>
+          ))}
+        </div>
+      </Container>
+    </Band>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────── map ──
+function MapBlock({ section, base, site }: { section: S<"map">; base: string; site: Site }) {
+  const { address } = site.profile.contact;
+  const query = [address.street, address.city, address.region, address.postalCode]
+    .filter(Boolean)
+    .join(", ");
+  const src = section.embedUrl ?? `https://www.google.com/maps?q=${encodeURIComponent(query || "United States")}&output=embed`;
+  return (
+    <Band bg={section.background} anchor={base} className="!py-0">
+      <div className="relative">
+        {section.heading ? (
+          <Container className="py-10">
+            <Intro heading={section.heading} intro={section.intro} base={base} />
+          </Container>
+        ) : null}
+        <iframe
+          title={section.heading ?? "Map"}
+          src={src}
+          className="block h-[420px] w-full border-0 grayscale-[0.2]"
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+        />
+      </div>
     </Band>
   );
 }
