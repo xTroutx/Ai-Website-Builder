@@ -869,14 +869,14 @@ const GRID_COLS: Record<number, string> = {
 /** A column-header + labelled-row pricing matrix. Inherits surrounding text color. */
 function RateMatrixTable({ table, path }: { table: import("@/lib/schema").RateMatrix; path: string }) {
   return (
-    <div data-edit={path}>
+    <div>
       <table className="w-full border-collapse text-left text-sm">
         <thead>
           <tr className="border-b border-current/20">
             <th className="py-2 pr-4 font-heading text-base font-bold uppercase tracking-wide">&nbsp;</th>
             {table.columns.map((c, i) => (
               <th key={i} className="py-2 pl-4 text-right font-heading text-base font-bold uppercase tracking-wide text-primary">
-                {c}
+                <Editable as="span" path={editPath(path, "columns", i)}>{c}</Editable>
               </th>
             ))}
           </tr>
@@ -884,15 +884,21 @@ function RateMatrixTable({ table, path }: { table: import("@/lib/schema").RateMa
         <tbody>
           {table.rows.map((row, ri) => (
             <tr key={ri} className="border-b border-current/10 last:border-0">
-              <td className="py-2.5 pr-4 font-medium">{row.label}</td>
+              <td className="py-2.5 pr-4 font-medium">
+                <Editable as="span" path={editPath(path, "rows", ri, "label")}>{row.label}</Editable>
+              </td>
               {row.values.map((v, vi) => (
-                <td key={vi} className="py-2.5 pl-4 text-right tabular-nums">{v}</td>
+                <td key={vi} className="py-2.5 pl-4 text-right tabular-nums">
+                  <Editable as="span" path={editPath(path, "rows", ri, "values", vi)}>{v}</Editable>
+                </td>
               ))}
             </tr>
           ))}
         </tbody>
       </table>
-      {table.note ? <p className="mt-3 text-xs opacity-60">{table.note}</p> : null}
+      {table.note ? (
+        <Editable as="p" path={editPath(path, "note")} className="mt-3 text-xs opacity-60">{table.note}</Editable>
+      ) : null}
     </div>
   );
 }
@@ -930,8 +936,8 @@ function MediaCards({ section, base }: { section: S<"mediaCards">; base: string 
             <dl className="mt-1 flex flex-col gap-1.5 border-t border-line pt-3 text-sm">
               {card.details.map((d, di) => (
                 <div key={di} className="flex justify-between gap-4">
-                  <dt className="text-muted">{d.label}</dt>
-                  <dd className="text-right font-medium">{d.value}</dd>
+                  <Editable as="dt" path={editPath(cBase, "details", di, "label")} className="text-muted">{d.label}</Editable>
+                  <Editable as="dd" path={editPath(cBase, "details", di, "value")} className="text-right font-medium">{d.value}</Editable>
                 </div>
               ))}
             </dl>
