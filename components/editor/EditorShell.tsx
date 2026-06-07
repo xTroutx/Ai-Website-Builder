@@ -262,6 +262,21 @@ export function EditorShell({
     void call("/api/edit", { op: "sectionBg", pageSlug, sectionId: selectedSectionId, ...patch });
   }
 
+  function applySectionAlign(align: "left" | "center") {
+    if (!selectedSectionId) return;
+    void call("/api/edit", { op: "section", action: "align", pageSlug, sectionId: selectedSectionId, align });
+  }
+
+  function addSection(sectionType: string) {
+    void call("/api/edit", {
+      op: "section",
+      action: "add",
+      pageSlug,
+      sectionType,
+      afterId: selectedSectionId ?? undefined,
+    });
+  }
+
   async function uploadSectionBg(file: File) {
     if (!selectedSectionId) return;
     setUploading(true);
@@ -475,6 +490,23 @@ export function EditorShell({
                 })}
               </div>
 
+              <p className="mt-3 text-xs font-medium uppercase tracking-wide text-zinc-400">Content alignment</p>
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {(["left", "center"] as const).map((a) => {
+                  const active = (selectedSection.align ?? "left") === a;
+                  return (
+                    <button
+                      key={a}
+                      onClick={() => applySectionAlign(a)}
+                      disabled={sending}
+                      className={`rounded border px-2 py-1 text-xs capitalize ${active ? "border-blue-600 bg-blue-50 text-blue-700" : "border-zinc-300 text-zinc-600 hover:bg-zinc-50"}`}
+                    >
+                      {a}
+                    </button>
+                  );
+                })}
+              </div>
+
               <p className="mt-3 text-xs font-medium uppercase tracking-wide text-zinc-400">Background image / video</p>
               <label className={`mt-1 block w-full cursor-pointer text-center ${secondaryBtn} ${uploading ? "opacity-60" : ""}`}>
                 {uploading ? "Uploading…" : "Upload background"}
@@ -585,6 +617,29 @@ export function EditorShell({
               ))}
               {sections.length === 0 ? <li className="text-sm text-zinc-400">No sections.</li> : null}
             </ul>
+
+            <details className="mt-3 rounded-md border border-zinc-200">
+              <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium text-blue-700">
+                + Add section
+              </summary>
+              <div className="border-t border-zinc-200 p-2">
+                <p className="mb-2 px-1 text-xs text-zinc-500">
+                  {selectedSectionId ? "Inserts after the selected section." : "Adds to the end of the page."}
+                </p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {ADDABLE_SECTIONS.map(([type, label]) => (
+                    <button
+                      key={type}
+                      disabled={sending}
+                      onClick={() => addSection(type)}
+                      className="rounded border border-zinc-300 px-2 py-1.5 text-left text-xs text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </details>
           </div>
         </div>
         <div className="border-t border-zinc-200 px-4 py-3 text-xs text-zinc-400">
@@ -594,6 +649,31 @@ export function EditorShell({
     </div>
   );
 }
+
+/** Section types a captain can add, with friendly labels (mirrors the server factory). */
+const ADDABLE_SECTIONS: ReadonlyArray<readonly [string, string]> = [
+  ["hero", "Hero banner"],
+  ["mediaText", "Image + text"],
+  ["richText", "Text block"],
+  ["featureGrid", "Feature grid"],
+  ["tripCards", "Trip cards"],
+  ["speciesCards", "Species / destination cards"],
+  ["mediaCards", "Photo cards"],
+  ["pricingTable", "Pricing tiers"],
+  ["rateTable", "Rate table"],
+  ["pricedOffering", "Priced offering"],
+  ["checklist", "Checklist"],
+  ["steps", "Steps"],
+  ["gallery", "Photo gallery"],
+  ["testimonials", "Testimonials"],
+  ["stats", "Stats"],
+  ["faq", "FAQ"],
+  ["infoList", "Info list"],
+  ["ctaBanner", "Call-to-action banner"],
+  ["contact", "Contact + form"],
+  ["map", "Map"],
+  ["articleBody", "Article body"],
+];
 
 const fieldCls =
   "mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none";

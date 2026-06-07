@@ -302,11 +302,12 @@ function MediaText({ section, base }: { section: S<"mediaText">; base: string })
 
 // ─────────────────────────────────────────────────────────────── richText ──
 function RichText({ section, base }: { section: S<"richText">; base: string }) {
+  const center = (section.align ?? "left") === "center";
   return (
     <Band bg={section.background} anchor={base}>
       <Container>
-        <div className="mx-auto flex max-w-3xl flex-col gap-4">
-          <SectionHeading text={section.heading} path={editPath(base, "heading")} />
+        <div className={["flex max-w-3xl flex-col gap-4", center ? "mx-auto items-center text-center" : ""].join(" ")}>
+          <SectionHeading text={section.heading} path={editPath(base, "heading")} align={center ? "center" : "left"} />
           {section.body.map((para, i) => (
             <Editable key={i} as="p" path={editPath(base, "body", i)} className="text-lg leading-relaxed text-muted">
               {para}

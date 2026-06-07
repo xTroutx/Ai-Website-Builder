@@ -43,6 +43,8 @@ const base = {
   hidden: z.boolean().default(false),
   /** Section-level background styling (color/image/overlay). */
   background: SectionBackgroundSchema.optional(),
+  /** Curated content alignment for the section's heading/copy. Template default when omitted. */
+  align: z.enum(["left", "center"]).optional(),
 };
 
 /** Big top-of-page banner: headline, supporting copy, CTAs, and a hero image. */

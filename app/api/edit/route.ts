@@ -10,6 +10,8 @@ import {
   setMedia,
   setSectionBackground,
   setSectionBackgroundMedia,
+  setSectionAlign,
+  addSection,
   InvalidEditError,
 } from "@/lib/builder/mutations";
 import { proposeEdit } from "@/lib/builder/ai";
@@ -79,13 +81,28 @@ export async function POST(request: Request) {
     }
 
     if (op === "section") {
-      const { action, pageSlug, sectionId } = body as {
+      const { action, pageSlug, sectionId, sectionType, afterId, align } = body as {
         action?: string;
         pageSlug?: string;
         sectionId?: string;
+        sectionType?: string;
+        afterId?: string;
+        align?: "left" | "center" | null;
       };
-      if (!action || !pageSlug || !sectionId) {
-        return NextResponse.json({ error: "action, pageSlug, sectionId required." }, { status: 400 });
+      if (!action || !pageSlug) {
+        return NextResponse.json({ error: "action and pageSlug required." }, { status: 400 });
+      }
+      // "add" needs a sectionType, not a sectionId.
+      if (action === "add") {
+        if (!sectionType) {
+          return NextResponse.json({ error: "sectionType required." }, { status: 400 });
+        }
+        await saveSite(addSection(site, pageSlug, sectionType, afterId));
+        revalidatePath("/", "layout");
+        return NextResponse.json({ ok: true });
+      }
+      if (!sectionId) {
+        return NextResponse.json({ error: "sectionId required." }, { status: 400 });
       }
       let updated;
       switch (action) {
@@ -100,6 +117,9 @@ export async function POST(request: Request) {
           break;
         case "down":
           updated = moveSection(site, pageSlug, sectionId, 1);
+          break;
+        case "align":
+          updated = setSectionAlign(site, pageSlug, sectionId, align ?? null);
           break;
         case "remove":
           updated = removeSection(site, pageSlug, sectionId);

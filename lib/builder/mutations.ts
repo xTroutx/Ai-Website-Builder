@@ -234,6 +234,84 @@ export function setSectionBackgroundMedia(
   return revalidate(next, `Set background image on "${sectionId}"`);
 }
 
+/** Set (or clear) a section's content alignment. */
+export function setSectionAlign(
+  site: Site,
+  pageSlug: string,
+  sectionId: string,
+  align: "left" | "center" | null,
+): Site {
+  const next = structuredClone(site);
+  const page = findPage(next, pageSlug);
+  const section = page.sections.find((s) => s.id === sectionId);
+  if (!section) throw new InvalidEditError(`No section "${sectionId}".`);
+  if (align === null) delete section.align;
+  else section.align = align;
+  return revalidate(next, `Align section "${sectionId}"`);
+}
+
+/**
+ * Default content for each section type — the minimal valid shape (placeholder
+ * copy + empty media) used when a captain adds a new section. Everything is real,
+ * editable content; the schema fills the rest of the defaults on revalidate.
+ */
+const SECTION_TEMPLATES: Record<string, (id: string) => Record<string, unknown>> = {
+  hero: (id) => ({ id, type: "hero", headline: "Your headline here", subheadline: "A sentence about what you offer.", media: { src: "", alt: "Hero image" }, primaryCta: { label: "Book Now", href: "/contact", variant: "primary" } }),
+  mediaText: (id) => ({ id, type: "mediaText", heading: "Section heading", body: ["Add a paragraph of copy here."], media: { src: "", alt: "Photo" }, mediaSide: "left", tone: "dark" }),
+  richText: (id) => ({ id, type: "richText", heading: "Section heading", body: ["Add a paragraph of copy here."] }),
+  featureGrid: (id) => ({ id, type: "featureGrid", heading: "What sets us apart", items: [{ title: "Feature one", body: "Describe it." }, { title: "Feature two", body: "Describe it." }, { title: "Feature three", body: "Describe it." }] }),
+  tripCards: (id) => ({ id, type: "tripCards", heading: "Our Trips", trips: [{ title: "Trip name", summary: "What this trip is about." }] }),
+  speciesCards: (id) => ({ id, type: "speciesCards", heading: "Target Species", species: [{ name: "Species name", blurb: "When and how we target them." }] }),
+  pricingTable: (id) => ({ id, type: "pricingTable", heading: "Rates", tiers: [{ name: "Tier", price: 0, features: ["Included item"] }] }),
+  gallery: (id) => ({ id, type: "gallery", heading: "Gallery", images: [{ src: "", alt: "Photo one" }, { src: "", alt: "Photo two" }, { src: "", alt: "Photo three" }] }),
+  testimonials: (id) => ({ id, type: "testimonials", heading: "What Guests Say", items: [{ quote: "A great review goes here.", author: "Guest name", rating: 5 }] }),
+  faq: (id) => ({ id, type: "faq", heading: "FAQ", items: [{ question: "A common question?", answer: "The answer." }] }),
+  infoList: (id) => ({ id, type: "infoList", heading: "Details", items: [{ label: "Label", value: "Value" }] }),
+  stats: (id) => ({ id, type: "stats", heading: "By the Numbers", items: [{ value: "100+", label: "Trips run" }] }),
+  ctaBanner: (id) => ({ id, type: "ctaBanner", heading: "Ready to book?", body: "A short nudge to act.", cta: { label: "Book Now", href: "/contact", variant: "primary" } }),
+  contact: (id) => ({ id, type: "contact", heading: "Get in Touch", body: "Send us a message and we'll reply soon." }),
+  articleBody: (id) => ({ id, type: "articleBody", body: ["Write your article here."] }),
+  mediaCards: (id) => ({ id, type: "mediaCards", heading: "Highlights", cards: [{ title: "Card one", body: "Describe it." }, { title: "Card two", body: "Describe it." }, { title: "Card three", body: "Describe it." }] }),
+  checklist: (id) => ({ id, type: "checklist", heading: "What's Included", items: ["First item", "Second item", "Third item"] }),
+  rateTable: (id) => ({ id, type: "rateTable", heading: "Pricing", table: { columns: ["1 Angler", "2 Anglers"], rows: [{ label: "Half day", values: ["$0", "$0"] }, { label: "Full day", values: ["$0", "$0"] }] } }),
+  pricedOffering: (id) => ({ id, type: "pricedOffering", heading: "Trip name", body: ["What this trip includes."], rate: { columns: ["1 Angler", "2 Anglers"], rows: [{ label: "Half day", values: ["$0", "$0"] }] }, included: ["Gear provided", "Lunch included"] }),
+  steps: (id) => ({ id, type: "steps", heading: "How It Works", items: [{ kicker: "Step 01", title: "First step", body: "What happens." }, { kicker: "Step 02", title: "Second step", body: "What happens." }, { kicker: "Step 03", title: "Third step", body: "What happens." }] }),
+  map: (id) => ({ id, type: "map", heading: "Find Us" }),
+};
+
+/** Section types a captain can add, in a sensible menu order. */
+export const ADDABLE_SECTION_TYPES = Object.keys(SECTION_TEMPLATES);
+
+/**
+ * Add a new section of `type` to a page, optionally after `afterSectionId`
+ * (appended to the end otherwise). The new section gets a unique id and minimal
+ * valid placeholder content, then the whole site is re-validated.
+ */
+export function addSection(
+  site: Site,
+  pageSlug: string,
+  type: string,
+  afterSectionId?: string,
+): Site {
+  const make = SECTION_TEMPLATES[type];
+  if (!make) throw new InvalidEditError(`Unknown section type "${type}".`);
+  const next = structuredClone(site);
+  const page = findPage(next, pageSlug);
+
+  // Unique id within the page.
+  const existing = new Set(page.sections.map((s) => s.id));
+  let n = 1;
+  let id = type;
+  while (existing.has(id)) id = `${type}-${n++}`;
+
+  const section = make(id) as unknown as (typeof page.sections)[number];
+  const at = afterSectionId ? page.sections.findIndex((s) => s.id === afterSectionId) : -1;
+  if (at >= 0) page.sections.splice(at + 1, 0, section);
+  else page.sections.push(section);
+
+  return revalidate(next, `Add ${type} section`);
+}
+
 /** Remove a section from a page. */
 export function removeSection(
   site: Site,

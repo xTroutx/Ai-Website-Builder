@@ -543,6 +543,7 @@ export const holstonRiver: SiteInput = {
         {
           id: "grand-slam",
           type: "richText",
+          align: "center",
           heading: 'The "Grand Slam"',
           body: [
             "Catch a brook trout, a rainbow, and a brown in the same trip and you've completed what we call the Grand Slam. It's doable on a single long day of wade fishing across our freestone creeks, but it does take some local know-how. Ask your guide about it on your next trip.",

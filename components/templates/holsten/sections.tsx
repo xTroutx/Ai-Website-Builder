@@ -84,6 +84,11 @@ type S<T extends Section["type"]> = Extract<Section, { type: T }>;
 const HEADING_CLS =
   "font-heading font-bold uppercase leading-[0.95] tracking-tight text-4xl sm:text-5xl lg:text-[56px]";
 
+/** Whether a section should center its content — its `align`, or the template default. */
+function isCentered(section: { align?: "left" | "center" }, fallback: "left" | "center"): boolean {
+  return (section.align ?? fallback) === "center";
+}
+
 function Arrow({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 32 8" fill="none" className={["h-2 w-8 shrink-0", className ?? ""].join(" ")} aria-hidden>
@@ -291,6 +296,7 @@ function Hero({ section, base, isLead }: { section: S<"hero">; base: string; isL
 // ─────────────────────────────────────────────────────────────── mediaText ──
 function MediaText({ section, base }: { section: S<"mediaText">; base: string }) {
   const imageFirst = section.mediaSide === "left";
+  const center = isCentered(section, "left");
   return (
     <Band tone={section.tone === "light" ? "band" : "bg"} bg={section.background} anchor={base}>
       <Container>
@@ -298,7 +304,7 @@ function MediaText({ section, base }: { section: S<"mediaText">; base: string })
           <div className={imageFirst ? "lg:order-1" : "lg:order-2"}>
             <MediaPlaceholder media={section.media} path={editPath(base, "media")} ratio="5 / 4" rounded={false} />
           </div>
-          <div className={["flex flex-col gap-6", imageFirst ? "lg:order-2" : "lg:order-1"].join(" ")}>
+          <div className={["flex flex-col gap-6", center ? "items-center text-center" : "", imageFirst ? "lg:order-2" : "lg:order-1"].join(" ")}>
             {section.eyebrow ? <Eyebrow text={section.eyebrow} path={editPath(base, "eyebrow")} /> : null}
             <Heading text={section.heading} path={editPath(base, "heading")} />
             <div className="flex flex-col gap-4">
@@ -322,11 +328,12 @@ function MediaText({ section, base }: { section: S<"mediaText">; base: string })
 
 // ──────────────────────────────────────────────────────────────── richText ──
 function RichText({ section, base }: { section: S<"richText">; base: string }) {
+  const center = isCentered(section, "left");
   return (
     <Band bg={section.background} anchor={base}>
       <Container>
-        <div className="mx-auto flex max-w-3xl flex-col gap-5">
-          {section.heading ? <Heading text={section.heading} path={editPath(base, "heading")} /> : null}
+        <div className={["flex max-w-3xl flex-col gap-5", center ? "mx-auto items-center text-center" : ""].join(" ")}>
+          {section.heading ? <Heading text={section.heading} path={editPath(base, "heading")} center={center} /> : null}
           {section.body.map((para, i) => (
             <Editable key={i} as="p" path={editPath(base, "body", i)} className="text-lg leading-relaxed opacity-90">
               {para}
@@ -698,9 +705,10 @@ function Stats({ section, base }: { section: S<"stats">; base: string }) {
 function CtaBanner({ section, base }: { section: S<"ctaBanner">; base: string }) {
   const ctaMedia = section.background?.media?.src ? section.background.media : section.media;
   const hasMedia = Boolean(ctaMedia?.src);
+  const center = isCentered(section, "center");
   const inner = (
     <Container>
-      <div className="flex flex-col items-center gap-6 text-center">
+      <div className={["flex flex-col gap-6", center ? "items-center text-center" : "items-start text-left"].join(" ")}>
         <Editable
           as="h2"
           path={editPath(base, "heading")}
@@ -806,10 +814,11 @@ function Field({ label, name, type = "text" }: { label: string; name: string; ty
 
 // ────────────────────────────────────────────────────────────── articleBody ──
 function ArticleBody({ section, base }: { section: S<"articleBody">; base: string }) {
+  const center = isCentered(section, "left");
   return (
     <Band bg={section.background} anchor={base}>
       <Container>
-        <article className="mx-auto flex max-w-3xl flex-col gap-5">
+        <article className={["mx-auto flex max-w-3xl flex-col gap-5", center ? "items-center text-center" : ""].join(" ")}>
           {section.pullQuote ? (
             <Editable as="blockquote" path={editPath(base, "pullQuote")} className="border-l-4 border-primary pl-5 font-heading text-2xl font-bold uppercase leading-tight">
               {section.pullQuote}
@@ -940,7 +949,7 @@ function MediaCards({ section, base }: { section: S<"mediaCards">; base: string 
   return (
     <Band bg={section.background} anchor={base}>
       <Container>
-        <Intro heading={section.heading} intro={section.intro} base={base} />
+        <Intro heading={section.heading} intro={section.intro} base={base} center={isCentered(section, "left")} />
         {section.layout === "carousel" ? (
           <div className="-mx-1 flex snap-x gap-6 overflow-x-auto px-1 pb-4">{cards}</div>
         ) : (
@@ -956,7 +965,7 @@ function Checklist({ section, base }: { section: S<"checklist">; base: string })
   return (
     <Band tone="surface" bg={section.background} anchor={base}>
       <Container>
-        <Intro heading={section.heading} intro={section.intro} base={base} />
+        <Intro heading={section.heading} intro={section.intro} base={base} center={isCentered(section, "left")} />
         <ul className={["grid gap-x-10 gap-y-3", GRID_COLS[section.columns] ?? ""].join(" ")}>
           {section.items.map((item, i) => (
             <li key={i} className="flex items-start gap-3">
@@ -977,7 +986,7 @@ function RateTable({ section, base }: { section: S<"rateTable">; base: string })
   return (
     <Band bg={section.background} anchor={base}>
       <Container>
-        <Intro heading={section.heading} intro={section.intro} base={base} />
+        <Intro heading={section.heading} intro={section.intro} base={base} center={isCentered(section, "center")} />
         <div className="mx-auto max-w-2xl rounded-theme bg-surface p-7">
           <RateMatrixTable table={section.table} path={editPath(base, "table")} />
         </div>
@@ -1061,7 +1070,7 @@ function Steps({ section, base }: { section: S<"steps">; base: string }) {
   return (
     <Band bg={section.background} anchor={base}>
       <Container>
-        <Intro heading={section.heading} intro={section.intro} base={base} />
+        <Intro heading={section.heading} intro={section.intro} base={base} center={isCentered(section, "center")} />
         <div className={["grid gap-8", cols].join(" ")}>
           {section.items.map((item, i) => (
             <div key={i} className="flex flex-col gap-3 border-t-2 border-primary pt-5">
@@ -1096,7 +1105,7 @@ function MapBlock({ section, base, site }: { section: S<"map">; base: string; si
       <div className="relative">
         {section.heading ? (
           <Container className="py-10">
-            <Intro heading={section.heading} intro={section.intro} base={base} />
+            <Intro heading={section.heading} intro={section.intro} base={base} center={isCentered(section, "left")} />
           </Container>
         ) : null}
         <iframe

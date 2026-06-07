@@ -7,6 +7,9 @@ import {
   moveSection,
   removeSection,
   setSectionMedia,
+  setSectionAlign,
+  addSection,
+  ADDABLE_SECTION_TYPES,
 } from "./mutations";
 
 /**
@@ -99,6 +102,32 @@ const TOOLS: Anthropic.Tool[] = [
       required: ["sectionId"],
     },
   },
+  {
+    name: "set_section_align",
+    description:
+      "Set a section's content alignment to 'left' or 'center' (by section id). Affects the section's heading and copy.",
+    input_schema: {
+      type: "object",
+      properties: {
+        sectionId: { type: "string" },
+        align: { type: "string", enum: ["left", "center"] },
+      },
+      required: ["sectionId", "align"],
+    },
+  },
+  {
+    name: "add_section",
+    description:
+      "Add a NEW section to the current page with placeholder content the user can then edit. Optionally insert it after an existing section (afterSectionId); otherwise it's appended to the end.",
+    input_schema: {
+      type: "object",
+      properties: {
+        sectionType: { type: "string", enum: ADDABLE_SECTION_TYPES },
+        afterSectionId: { type: "string" },
+      },
+      required: ["sectionType"],
+    },
+  },
 ];
 
 // Offered only when the captain attached an image/video.
@@ -157,6 +186,15 @@ function applyTool(
       return moveSection(site, pageSlug, String(input.sectionId), input.direction === "up" ? -1 : 1);
     case "remove_section":
       return removeSection(site, pageSlug, String(input.sectionId));
+    case "set_section_align":
+      return setSectionAlign(site, pageSlug, String(input.sectionId), input.align === "center" ? "center" : "left");
+    case "add_section":
+      return addSection(
+        site,
+        pageSlug,
+        String(input.sectionType),
+        input.afterSectionId ? String(input.afterSectionId) : undefined,
+      );
     case "place_attached_media": {
       if (!args.attachment) throw new Error("No image is attached to place.");
       return setSectionMedia(site, pageSlug, String(input.sectionId), {
