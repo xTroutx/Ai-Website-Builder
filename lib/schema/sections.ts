@@ -119,6 +119,10 @@ export const TripCardsSectionSchema = z.object({
         priceFrom: z.number().nonnegative().optional(),
         duration: z.string().optional(),
         media: MediaSchema.optional(),
+        /** Per-card styling (background color/image/overlay), selectable in the editor. */
+        background: SectionBackgroundSchema.optional(),
+        /** Per-card content alignment. */
+        align: z.enum(["left", "center"]).optional(),
       }),
     )
     .min(1),
@@ -138,6 +142,10 @@ export const SpeciesCardsSectionSchema = z.object({
         /** Best months, e.g. "Apr–Oct". */
         season: z.string().optional(),
         media: MediaSchema.optional(),
+        /** Per-card styling (background color/image/overlay), selectable in the editor. */
+        background: SectionBackgroundSchema.optional(),
+        /** Per-card content alignment. */
+        align: z.enum(["left", "center"]).optional(),
       }),
     )
     .min(1),
@@ -316,6 +324,10 @@ export const MediaCardsSectionSchema = z.object({
           .array(z.object({ label: z.string().min(1), value: z.string().min(1) }))
           .default([]),
         cta: CtaSchema.optional(),
+        /** Per-card styling (background color/image/overlay), selectable in the editor. */
+        background: SectionBackgroundSchema.optional(),
+        /** Per-card content alignment. */
+        align: z.enum(["left", "center"]).optional(),
       }),
     )
     .min(1),

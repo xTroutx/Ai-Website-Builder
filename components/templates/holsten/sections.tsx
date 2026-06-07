@@ -89,6 +89,47 @@ function isCentered(section: { align?: "left" | "center" }, fallback: "left" | "
   return (section.align ?? fallback) === "center";
 }
 
+/** Background color utility for a curated per-card background color token. */
+function cardBgClass(color?: string): string {
+  return color === "surface"
+    ? "bg-surface"
+    : color === "band"
+      ? "bg-band text-on-band"
+      : color === "primary"
+        ? "bg-primary text-on-primary"
+        : "bg-bg";
+}
+
+/** Per-card image/video background + optional overlay, behind card content. */
+function CardBackground({
+  media,
+  overlay,
+  dataEdit,
+}: {
+  media?: SectionBackground["media"];
+  overlay?: SectionBackground["overlay"];
+  dataEdit: string;
+}) {
+  return (
+    <div data-edit={dataEdit} className="absolute inset-0">
+      {media?.src ? (
+        media.kind === "video" ? (
+          <video src={media.src} className="absolute inset-0 size-full object-cover" muted loop playsInline />
+        ) : (
+          <Image src={media.src} alt={media.alt} fill sizes="(max-width:768px) 50vw, 25vw" className="object-cover" />
+        )
+      ) : null}
+      {overlay ? (
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{ backgroundColor: overlay.tone === "dark" ? "#000" : "#fff", opacity: overlay.opacity / 100 }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
 function Arrow({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 32 8" fill="none" className={["h-2 w-8 shrink-0", className ?? ""].join(" ")} aria-hidden>
@@ -390,12 +431,17 @@ function TripCards({ section, base }: { section: S<"tripCards">; base: string })
         <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
           {section.trips.map((trip, i) => {
             const tBase = editPath(base, "trips", i);
+            const center = (trip.align ?? "left") === "center";
             return (
-              <article key={i} className="flex flex-col overflow-hidden rounded-theme bg-surface">
+              <article
+                key={i}
+                data-block={editPath(tBase)}
+                className={["flex flex-col overflow-hidden rounded-theme", cardBgClass(trip.background?.color)].join(" ")}
+              >
                 {trip.media ? (
                   <MediaPlaceholder media={trip.media} path={editPath(tBase, "media")} ratio="3 / 2" rounded={false} />
                 ) : null}
-                <div className="flex flex-1 flex-col gap-4 p-7">
+                <div className={["flex flex-1 flex-col gap-4 p-7", center ? "items-center text-center" : ""].join(" ")}>
                   <Editable as="h3" path={editPath(tBase, "title")} className="font-heading text-2xl font-bold uppercase">
                     {trip.title}
                   </Editable>
@@ -444,19 +490,21 @@ function SpeciesCards({ section, base }: { section: S<"speciesCards">; base: str
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {section.species.map((sp, i) => {
             const spBase = editPath(base, "species", i);
+            const bgMedia = sp.background?.media?.src ? sp.background.media : sp.media;
+            const center = (sp.align ?? "left") === "center";
             const card = (
-              <article className="group relative aspect-[3/4] overflow-hidden rounded-theme bg-surface">
-                {sp.media?.src ? (
-                  sp.media.kind === "video" ? (
-                    <video src={sp.media.src} className="absolute inset-0 size-full object-cover" muted loop playsInline />
-                  ) : (
-                    <Image src={sp.media.src} alt={sp.media.alt} fill sizes="(max-width:768px) 50vw, 25vw" className="object-cover" />
-                  )
-                ) : (
-                  <div aria-hidden className="absolute inset-0 bg-bg" />
-                )}
+              <article
+                data-block={editPath(spBase)}
+                className={["group relative aspect-[3/4] overflow-hidden rounded-theme", cardBgClass(sp.background?.color)].join(" ")}
+              >
+                <CardBackground media={bgMedia} overlay={sp.background?.overlay} dataEdit={editPath(spBase, "background", "media")} />
                 <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 flex flex-col gap-1 p-5">
+                <div
+                  className={[
+                    "absolute inset-x-0 flex flex-col gap-1 p-5",
+                    center ? "inset-y-0 items-center justify-center text-center" : "bottom-0",
+                  ].join(" ")}
+                >
                   {sp.season ? (
                     <Editable as="p" path={editPath(spBase, "season")} className="font-body text-xs font-semibold uppercase tracking-[0.2em] text-primary">
                       {sp.season}
@@ -907,18 +955,21 @@ function RateMatrixTable({ table, path }: { table: import("@/lib/schema").RateMa
 function MediaCards({ section, base }: { section: S<"mediaCards">; base: string }) {
   const cards = section.cards.map((card, i) => {
     const cBase = editPath(base, "cards", i);
+    const center = (card.align ?? "left") === "center";
     return (
       <article
         key={i}
+        data-block={editPath(cBase)}
         className={[
-          "flex flex-col overflow-hidden rounded-theme bg-surface",
+          "flex flex-col overflow-hidden rounded-theme",
+          cardBgClass(card.background?.color),
           section.layout === "carousel" ? "w-[300px] shrink-0 snap-start sm:w-[340px]" : "",
         ].join(" ")}
       >
         {card.media ? (
           <MediaPlaceholder media={card.media} path={editPath(cBase, "media")} ratio="3 / 2" rounded={false} />
         ) : null}
-        <div className="flex flex-1 flex-col gap-3 p-6">
+        <div className={["flex flex-1 flex-col gap-3 p-6", center ? "items-center text-center" : ""].join(" ")}>
           {card.eyebrow ? (
             <Editable as="p" path={editPath(cBase, "eyebrow")} className="font-body text-xs font-semibold uppercase tracking-[0.2em] text-primary">
               {card.eyebrow}

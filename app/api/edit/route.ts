@@ -14,6 +14,9 @@ import {
   addSection,
   addArrayItem,
   removeArrayItem,
+  setBackgroundAtPath,
+  setBackgroundMediaAtPath,
+  setAlignAtPath,
   InvalidEditError,
 } from "@/lib/builder/mutations";
 import { proposeEdit } from "@/lib/builder/ai";
@@ -129,6 +132,29 @@ export async function POST(request: Request) {
         default:
           return NextResponse.json({ error: `Unknown action "${action}".` }, { status: 400 });
       }
+      await saveSite(updated);
+      revalidatePath("/", "layout");
+      return NextResponse.json({ ok: true });
+    }
+
+    if (op === "blockBg" || op === "blockBgMedia" || op === "blockAlign") {
+      const { path, color, overlay, src, kind, align } = body as {
+        path?: string;
+        color?: "default" | "surface" | "band" | "primary";
+        overlay?: { tone: "dark" | "light"; opacity: number } | null;
+        src?: string;
+        kind?: "image" | "video";
+        align?: "left" | "center" | null;
+      };
+      if (!path) {
+        return NextResponse.json({ error: "path required." }, { status: 400 });
+      }
+      let updated;
+      if (op === "blockBg") updated = setBackgroundAtPath(site, path, { color, overlay });
+      else if (op === "blockBgMedia") {
+        if (!src || !kind) return NextResponse.json({ error: "src and kind required." }, { status: 400 });
+        updated = setBackgroundMediaAtPath(site, path, { src, kind });
+      } else updated = setAlignAtPath(site, path, align ?? null);
       await saveSite(updated);
       revalidatePath("/", "layout");
       return NextResponse.json({ ok: true });

@@ -55,6 +55,7 @@ export function EditorShell({
   const [uploading, setUploading] = useState(false);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
+  const [selectedBlockPath, setSelectedBlockPath] = useState<string | null>(null);
   const [secInitFor, setSecInitFor] = useState<string | null>(null);
   const [ovOn, setOvOn] = useState(false);
   const [ovTone, setOvTone] = useState<"dark" | "light">("dark");
@@ -74,10 +75,25 @@ export function EditorShell({
   const selectedSection = selectedSectionId
     ? sections.find((s) => s.id === selectedSectionId)
     : undefined;
-  // Initialize overlay controls when the selected section changes (render-time guard).
-  if (selectedSectionId && selectedSectionId !== secInitFor) {
-    setSecInitFor(selectedSectionId);
-    const ov = selectedSection?.background?.overlay;
+  // A selected card/block (by data-edit path), resolved from the Site JSON.
+  let selectedBlock: { background?: { color?: string; overlay?: { tone: "dark" | "light"; opacity: number } }; align?: "left" | "center" } | undefined;
+  try {
+    selectedBlock = selectedBlockPath
+      ? (getValueAtPath(site, selectedBlockPath) as typeof selectedBlock)
+      : undefined;
+  } catch {
+    selectedBlock = undefined;
+  }
+  // The current styling target (a whole section, or a card within one).
+  const styleKey = selectedSectionId ?? selectedBlockPath;
+  const styleBg = selectedSection?.background ?? selectedBlock?.background;
+  const styleAlign = (selectedSection?.align ?? selectedBlock?.align) ?? "left";
+  const styleLabel = selectedSection ? "Section" : "Card";
+  const styleName = selectedSection?.type ?? "card";
+  // Initialize overlay controls when the styling target changes (render-time guard).
+  if (styleKey && styleKey !== secInitFor) {
+    setSecInitFor(styleKey);
+    const ov = styleBg?.overlay;
     setOvOn(Boolean(ov));
     setOvTone(ov?.tone ?? "dark");
     setOvOpacity(ov?.opacity ?? 40);
@@ -99,7 +115,22 @@ export function EditorShell({
         if (path) {
           setSelectedPath(path);
           setSelectedSectionId(null);
+          setSelectedBlockPath(null);
           setManualOpen(false);
+          setMessage(null);
+        }
+        return;
+      }
+      // A card/block (e.g. a destination card) is selectable for its own styling.
+      const block = target.closest<HTMLElement>("[data-block]");
+      if (block) {
+        e.preventDefault();
+        e.stopPropagation();
+        const path = block.getAttribute("data-block");
+        if (path) {
+          setSelectedBlockPath(path);
+          setSelectedSectionId(null);
+          setSelectedPath(null);
           setMessage(null);
         }
         return;
@@ -112,6 +143,7 @@ export function EditorShell({
         const id = (sec.getAttribute("data-section") ?? "").split(".").slice(1).join(".");
         if (id) {
           setSelectedSectionId(id);
+          setSelectedBlockPath(null);
           setSelectedPath(null);
           setMessage(null);
         }
@@ -258,11 +290,19 @@ export function EditorShell({
     color?: "default" | "surface" | "band" | "primary";
     overlay?: { tone: "dark" | "light"; opacity: number } | null;
   }) {
+    if (selectedBlockPath) {
+      void call("/api/edit", { op: "blockBg", path: selectedBlockPath, ...patch });
+      return;
+    }
     if (!selectedSectionId) return;
     void call("/api/edit", { op: "sectionBg", pageSlug, sectionId: selectedSectionId, ...patch });
   }
 
   function applySectionAlign(align: "left" | "center") {
+    if (selectedBlockPath) {
+      void call("/api/edit", { op: "blockAlign", path: selectedBlockPath, align });
+      return;
+    }
     if (!selectedSectionId) return;
     void call("/api/edit", { op: "section", action: "align", pageSlug, sectionId: selectedSectionId, align });
   }
@@ -287,18 +327,17 @@ export function EditorShell({
   }
 
   async function uploadSectionBg(file: File) {
-    if (!selectedSectionId) return;
+    if (!selectedSectionId && !selectedBlockPath) return;
     setUploading(true);
     setMessage(null);
     try {
       const m = await uploadToBlob(file);
-      await call("/api/edit", {
-        op: "sectionBgMedia",
-        pageSlug,
-        sectionId: selectedSectionId,
-        src: m.url,
-        kind: m.kind,
-      });
+      await call(
+        "/api/edit",
+        selectedBlockPath
+          ? { op: "blockBgMedia", path: selectedBlockPath, src: m.url, kind: m.kind }
+          : { op: "sectionBgMedia", pageSlug, sectionId: selectedSectionId, src: m.url, kind: m.kind },
+      );
     } catch (err) {
       setMessage({ text: (err as Error).message ?? "Upload failed.", error: true });
     } finally {
@@ -313,6 +352,9 @@ export function EditorShell({
       ) : null}
       {selectedSectionId ? (
         <style>{`[data-section$=".${cssEscape(selectedSectionId)}"]{outline:3px solid #7c3aed!important;outline-offset:-3px;}`}</style>
+      ) : null}
+      {selectedBlockPath ? (
+        <style>{`[data-block="${selectedBlockPath}"]{outline:3px solid #7c3aed!important;outline-offset:-3px;}`}</style>
       ) : null}
 
       {/* Preview */}
@@ -490,14 +532,20 @@ export function EditorShell({
             ) : null}
           </div>
 
-          {/* Section style (whole section selected) */}
-          {selectedSection ? (
+          {/* Section / card style (whole section or a card selected) */}
+          {selectedSection || selectedBlock ? (
             <div className="border-b border-zinc-200 px-4 py-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold">
-                  Section: <span className="text-zinc-500">{selectedSection.type}</span>
+                  {styleLabel}: <span className="text-zinc-500">{styleName}</span>
                 </h2>
-                <button onClick={() => setSelectedSectionId(null)} className="text-xs text-zinc-500 underline">
+                <button
+                  onClick={() => {
+                    setSelectedSectionId(null);
+                    setSelectedBlockPath(null);
+                  }}
+                  className="text-xs text-zinc-500 underline"
+                >
                   clear
                 </button>
               </div>
@@ -505,9 +553,7 @@ export function EditorShell({
               <p className="mt-3 text-xs font-medium uppercase tracking-wide text-zinc-400">Background color</p>
               <div className="mt-1 flex flex-wrap gap-1.5">
                 {(["default", "surface", "band", "primary"] as const).map((c) => {
-                  const active =
-                    selectedSection.background?.color === c ||
-                    (!selectedSection.background?.color && c === "default");
+                  const active = styleBg?.color === c || (!styleBg?.color && c === "default");
                   return (
                     <button
                       key={c}
@@ -524,7 +570,7 @@ export function EditorShell({
               <p className="mt-3 text-xs font-medium uppercase tracking-wide text-zinc-400">Content alignment</p>
               <div className="mt-1 flex flex-wrap gap-1.5">
                 {(["left", "center"] as const).map((a) => {
-                  const active = (selectedSection.align ?? "left") === a;
+                  const active = styleAlign === a;
                   return (
                     <button
                       key={a}

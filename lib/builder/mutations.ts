@@ -324,6 +324,65 @@ export function removeSection(
   return revalidate(next, `Remove section "${sectionId}"`);
 }
 
+// ── Per-element styling (cards) ────────────────────────────────────────────
+// These operate on the styleable object at a data-edit path (e.g. a card),
+// mirroring the section-level background/align ops but addressed by path.
+
+/** Set the curated background color and/or overlay on the object at `path`. */
+export function setBackgroundAtPath(
+  site: Site,
+  path: string,
+  patch: {
+    color?: "default" | "surface" | "band" | "primary";
+    overlay?: { tone: "dark" | "light"; opacity: number } | null;
+  },
+): Site {
+  const obj = getValueAtPath(site, path);
+  if (!obj || typeof obj !== "object") throw new InvalidEditError(`Nothing styleable at "${path}".`);
+  const target = obj as Record<string, unknown>;
+  const bg = { ...((target.background as Record<string, unknown>) ?? {}) };
+  if (patch.color !== undefined) bg.color = patch.color;
+  if (patch.overlay !== undefined) {
+    if (patch.overlay === null) delete bg.overlay;
+    else bg.overlay = patch.overlay;
+  }
+  return revalidate(setValueAtPath(site, path, { ...target, background: bg }), `Style "${path}"`);
+}
+
+/** Set/replace the background image or video on the object at `path`. */
+export function setBackgroundMediaAtPath(
+  site: Site,
+  path: string,
+  media: { src: string; kind: "image" | "video" },
+): Site {
+  const obj = getValueAtPath(site, path);
+  if (!obj || typeof obj !== "object") throw new InvalidEditError(`Nothing styleable at "${path}".`);
+  const target = obj as Record<string, unknown>;
+  const bg = { ...((target.background as Record<string, unknown>) ?? {}) };
+  const existing = (bg.media as Record<string, unknown>) ?? {};
+  const alt =
+    (existing.alt as string) || (target.title as string) || (target.name as string) || "Background image";
+  bg.media = {
+    ...existing,
+    kind: media.kind,
+    src: media.src,
+    alt,
+    focalX: (existing.focalX as number) ?? 0.5,
+    focalY: (existing.focalY as number) ?? 0.5,
+  };
+  return revalidate(setValueAtPath(site, path, { ...target, background: bg }), `Set background image on "${path}"`);
+}
+
+/** Set (or clear) content alignment on the object at `path`. */
+export function setAlignAtPath(site: Site, path: string, align: "left" | "center" | null): Site {
+  const obj = getValueAtPath(site, path);
+  if (!obj || typeof obj !== "object") throw new InvalidEditError(`Nothing alignable at "${path}".`);
+  const target = { ...(obj as Record<string, unknown>) };
+  if (align === null) delete target.align;
+  else target.align = align;
+  return revalidate(setValueAtPath(site, path, target), `Align "${path}"`);
+}
+
 // ── List item operations ──────────────────────────────────────────────────
 
 /**
