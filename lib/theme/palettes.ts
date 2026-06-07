@@ -45,6 +45,23 @@ export const PALETTES = [
     },
   },
   {
+    id: "holsten",
+    name: "Holston",
+    description: "Dark olive, gold, and bone.",
+    colors: {
+      bg: "#202514",
+      surface: "#2a311b",
+      text: "#EDEDED",
+      muted: "#bcbfac",
+      primary: "#F1C045",
+      primaryContrast: "#202514",
+      accent: "#F1C045",
+      border: "#3c4427",
+      surfaceAlt: "#ECECEA",
+      onSurfaceAlt: "#202514",
+    },
+  },
+  {
     id: "harbor",
     name: "Harbor",
     description: "Deep navy and rope tan.",

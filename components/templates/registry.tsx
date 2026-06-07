@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import type { Page, Site } from "@/lib/schema";
 import { CoastalPageView } from "./coastal-view";
+import { HolstenPageView } from "./holsten-view";
 
 /**
  * Registry of template VIEWS — the React renderers that turn Site JSON into a
@@ -19,6 +20,7 @@ export type TemplateView = {
 
 export const TEMPLATE_VIEWS: Record<string, TemplateView> = {
   coastal: { id: "coastal", name: "Coastal", PageView: CoastalPageView },
+  holsten: { id: "holsten", name: "Holston River", PageView: HolstenPageView },
 };
 
 /** Resolve a template view by id, falling back to Coastal for unimplemented ids. */

@@ -7,6 +7,7 @@ import {
   TEMPLATES,
   getPalette,
   getFontPairing,
+  getTemplateDefaultAppearance,
   type Palette,
 } from "@/lib/theme";
 import { completeOnboarding } from "@/lib/onboarding-actions";
@@ -134,7 +135,17 @@ export function OnboardingWizard({ defaults }: { defaults: WizardDefaults }) {
         {step === 1 && (
           <TemplateStep
             value={form.templateId}
-            onChange={(id) => set("templateId", id)}
+            onChange={(id) => {
+              // Picking a template applies the palette + fonts it was designed
+              // around; the captain can still change them on the next step.
+              const appearance = getTemplateDefaultAppearance(id);
+              setForm((f) => ({
+                ...f,
+                templateId: id,
+                paletteId: appearance.paletteId,
+                fontId: appearance.fontId,
+              }));
+            }}
           />
         )}
         {step === 2 && (

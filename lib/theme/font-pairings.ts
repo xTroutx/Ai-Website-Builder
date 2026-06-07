@@ -25,6 +25,13 @@ export const FONT_PAIRINGS = [
     body: "var(--font-barlow), 'Segoe UI', system-ui, sans-serif",
   },
   {
+    id: "saira-inter",
+    name: "Field Guide",
+    description: "Ultra-condensed headings, clean Inter body.",
+    heading: "var(--font-saira), 'Oswald', 'Arial Narrow', sans-serif",
+    body: "var(--font-inter), 'Segoe UI', system-ui, sans-serif",
+  },
+  {
     id: "classic-serif",
     name: "Classic",
     description: "Timeless all-serif.",

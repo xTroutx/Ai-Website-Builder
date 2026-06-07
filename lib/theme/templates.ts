@@ -26,6 +26,13 @@ export const TEMPLATES = [
     radius: "0px",
   },
   {
+    id: "holsten",
+    name: "Holston River",
+    description: "Dark, rugged fly-fishing layout with gold accents.",
+    available: true,
+    radius: "0px",
+  },
+  {
     id: "classic",
     name: "Classic",
     description: "Traditional, content-rich layout. (Coming soon)",
@@ -55,4 +62,25 @@ export const DEFAULT_TEMPLATE_ID: TemplateId = "coastal";
 
 export function getTemplate(id: string): Template {
   return TEMPLATES.find((t) => t.id === id) ?? TEMPLATES[0];
+}
+
+/**
+ * The palette + font each template was designed around. Picking a template in
+ * the customizer applies these so it looks the way it does in the comparison —
+ * the captain can still change colors/fonts afterward (they're independent).
+ */
+export const TEMPLATE_DEFAULT_APPEARANCE: Record<
+  string,
+  { paletteId: string; fontId: string }
+> = {
+  coastal: { paletteId: "crystal-coast", fontId: "antonio-barlow" },
+  holsten: { paletteId: "holsten", fontId: "saira-inter" },
+};
+
+/** Recommended palette/font for a template (falls back to the coastal pairing). */
+export function getTemplateDefaultAppearance(id: string): {
+  paletteId: string;
+  fontId: string;
+} {
+  return TEMPLATE_DEFAULT_APPEARANCE[id] ?? TEMPLATE_DEFAULT_APPEARANCE.coastal;
 }

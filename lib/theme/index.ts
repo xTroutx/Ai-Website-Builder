@@ -20,6 +20,8 @@ export {
   TEMPLATE_IDS,
   DEFAULT_TEMPLATE_ID,
   getTemplate,
+  TEMPLATE_DEFAULT_APPEARANCE,
+  getTemplateDefaultAppearance,
   type Template,
   type TemplateId,
 } from "./templates";
