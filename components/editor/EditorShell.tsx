@@ -84,12 +84,30 @@ export function EditorShell({
   } catch {
     selectedBlock = undefined;
   }
+  // Raw value of the selected block, to tell tables/lists from styleable cards.
+  let blockValue: unknown;
+  try {
+    blockValue = selectedBlockPath ? getValueAtPath(site, selectedBlockPath) : undefined;
+  } catch {
+    blockValue = undefined;
+  }
+  const blockIsRate =
+    !!blockValue &&
+    typeof blockValue === "object" &&
+    Array.isArray((blockValue as Record<string, unknown>).rows) &&
+    Array.isArray((blockValue as Record<string, unknown>).columns);
+  const blockIsList = Array.isArray(blockValue);
+  const rateRows = blockIsRate ? (blockValue as { rows: unknown[] }).rows.length : 0;
+  const rateCols = blockIsRate ? (blockValue as { columns: unknown[] }).columns.length : 0;
+  const listLen = blockIsList ? (blockValue as unknown[]).length : 0;
+  const blockIsStyleable = !!selectedBlock && !blockIsRate && !blockIsList;
+
   // The current styling target (a whole section, or a card within one).
   const styleKey = selectedSectionId ?? selectedBlockPath;
   const styleBg = selectedSection?.background ?? selectedBlock?.background;
   const styleAlign = (selectedSection?.align ?? selectedBlock?.align) ?? "left";
-  const styleLabel = selectedSection ? "Section" : "Card";
-  const styleName = selectedSection?.type ?? "card";
+  const styleLabel = selectedSection ? "Section" : blockIsRate ? "Rate table" : blockIsList ? "List" : "Card";
+  const styleName = selectedSection?.type ?? (blockIsRate ? "rows & columns" : blockIsList ? "items" : "card");
   // Initialize overlay controls when the styling target changes (render-time guard).
   if (styleKey && styleKey !== secInitFor) {
     setSecInitFor(styleKey);
@@ -325,6 +343,12 @@ export function EditorShell({
     if (!selectedPath) return;
     void call("/api/edit", { op: "array", action: "remove", path: selectedPath, advanced });
   }
+  function addAt(path: string) {
+    void call("/api/edit", { op: "array", action: "add", path, advanced });
+  }
+  function removeAt(path: string) {
+    void call("/api/edit", { op: "array", action: "remove", path, advanced });
+  }
 
   async function uploadSectionBg(file: File) {
     if (!selectedSectionId && !selectedBlockPath) return;
@@ -550,6 +574,30 @@ export function EditorShell({
                 </button>
               </div>
 
+              {blockIsRate ? (
+                <>
+                  <p className="mt-3 text-xs font-medium uppercase tracking-wide text-zinc-400">Rows &amp; columns</p>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    <button onClick={() => addAt(`${selectedBlockPath}.rows`)} disabled={sending} className={secondaryBtn}>+ Add row</button>
+                    <button onClick={() => removeAt(`${selectedBlockPath}.rows.${rateRows - 1}`)} disabled={sending || rateRows <= 1} className={dangerBtn}>Remove row</button>
+                    <button onClick={() => addAt(`${selectedBlockPath}.columns`)} disabled={sending} className={secondaryBtn}>+ Add column</button>
+                    <button onClick={() => removeAt(`${selectedBlockPath}.columns.${rateCols - 1}`)} disabled={sending || rateCols <= 1} className={dangerBtn}>Remove column</button>
+                  </div>
+                </>
+              ) : null}
+
+              {blockIsList ? (
+                <>
+                  <p className="mt-3 text-xs font-medium uppercase tracking-wide text-zinc-400">List items</p>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    <button onClick={() => addAt(`${selectedBlockPath}`)} disabled={sending} className={secondaryBtn}>+ Add item</button>
+                    <button onClick={() => removeAt(`${selectedBlockPath}.${listLen - 1}`)} disabled={sending || listLen <= 1} className={dangerBtn}>Remove last</button>
+                  </div>
+                </>
+              ) : null}
+
+              {selectedSection || blockIsStyleable ? (
+                <>
               <p className="mt-3 text-xs font-medium uppercase tracking-wide text-zinc-400">Background color</p>
               <div className="mt-1 flex flex-wrap gap-1.5">
                 {(["default", "surface", "band", "primary"] as const).map((c) => {
@@ -643,6 +691,9 @@ export function EditorShell({
                     />
                   </label>
                 </div>
+              ) : null}
+
+                </>
               ) : null}
 
               {message ? (
@@ -790,6 +841,8 @@ const primaryBtn =
   "rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50";
 const secondaryBtn =
   "rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50";
+const dangerBtn =
+  "rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50";
 
 function Labeled({ label, children }: { label: string; children: ReactNode }) {
   return (

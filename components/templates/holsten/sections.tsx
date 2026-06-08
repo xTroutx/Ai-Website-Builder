@@ -1044,7 +1044,7 @@ function RateTable({ section, base }: { section: S<"rateTable">; base: string })
     <Band bg={section.background} anchor={base}>
       <Container>
         <Intro heading={section.heading} intro={section.intro} base={base} center={isCentered(section, "center")} />
-        <div className="mx-auto max-w-2xl rounded-theme bg-surface p-7">
+        <div data-block={editPath(base, "table")} className="mx-auto max-w-2xl rounded-theme bg-surface p-7">
           <RateMatrixTable table={section.table} path={editPath(base, "table")} />
         </div>
       </Container>
@@ -1082,12 +1082,12 @@ function PricedOffering({ section, base }: { section: S<"pricedOffering">; base:
   const detailsCol = (
     <div className="flex flex-col gap-6">
       {section.rate ? (
-        <div className="rounded-theme bg-surface p-7">
+        <div data-block={editPath(base, "rate")} className="rounded-theme bg-surface p-7">
           <RateMatrixTable table={section.rate} path={editPath(base, "rate")} />
         </div>
       ) : null}
       {section.included.length ? (
-        <div className="rounded-theme border border-line p-7">
+        <div data-block={editPath(base, "included")} className="rounded-theme border border-line p-7">
           <Editable
             as="h3"
             path={editPath(base, "includedTitle")}
