@@ -1,18 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { auth } from "@/auth";
 
 /**
- * Public FishySites marketing landing page — the front door of the journey
- * (visit → create account → onboarding). Recreated to match fishysites.com:
- * orange + dark charcoal + warm off-white, heavy condensed uppercase display
- * headings (Saira) over Inter body, orange marquee strips, photo-forward bands.
- * Keeps the real fishysites.com copy/taglines but pitches the self-serve builder
- * (CTAs → /signup). This is the platform's own page, not a Site-JSON template.
- *
- * Imagery: where the live site uses angler photography, this uses dark gradient
- * placeholders until real photos are supplied.
+ * Public FishySites marketing landing page (front door of the journey:
+ * visit → create account → onboarding). Clean self-serve structure, styled in
+ * the fishysites.com brand — orange + charcoal + warm off-white, condensed
+ * uppercase display headings (Saira) over Inter body. Pitches the self-serve
+ * builder (CTAs → /signup). The platform's own page, not a Site-JSON template.
  */
 export const metadata: Metadata = {
   title: "FishySites — Websites for fishing guides, charters & lodges",
@@ -22,7 +18,7 @@ export const metadata: Metadata = {
 
 const ORANGE = "#f07f1c";
 const DARK = "#20272b";
-const WARM = "#eae7e1";
+const WARM = "#f4f1ec";
 const SAIRA = "var(--font-saira), 'Oswald', 'Arial Narrow', sans-serif";
 
 export default async function LandingPage() {
@@ -30,369 +26,299 @@ export default async function LandingPage() {
   const loggedIn = Boolean(session?.user);
 
   return (
-    <div className="bg-white text-[#20272b]" style={{ fontFamily: "var(--font-inter), ui-sans-serif, system-ui, sans-serif" }}>
+    <div className="min-h-screen bg-white text-[#20272b]" style={{ fontFamily: "var(--font-inter), ui-sans-serif, system-ui, sans-serif" }}>
+      <Nav loggedIn={loggedIn} />
       <Hero loggedIn={loggedIn} />
-      <FishyDudes />
-      <Marquee />
-      <Cards />
+      <TrustStrip />
+      <Pillars />
+      <HowItWorks />
       <SeoSection />
-      <OrangeCallout />
-      <Hosting />
-      <OwnStrip />
-      <Showcase />
-      <NotAgency />
+      <Templates />
+      <Ownership />
       <FinalCta loggedIn={loggedIn} />
       <Footer />
     </div>
   );
 }
 
-// ───────────────────────────────────────────────────────────── hero + nav ──
-function Hero({ loggedIn }: { loggedIn: boolean }) {
+// ─────────────────────────────────────────────────────────────────── nav ──
+function Nav({ loggedIn }: { loggedIn: boolean }) {
   return (
-    <section className="relative isolate overflow-hidden text-white" style={{ backgroundColor: DARK }}>
-      {/* photographic backdrop placeholder (dark, warm) */}
-      <div
-        aria-hidden
-        className="absolute inset-0 -z-10"
-        style={{ background: "radial-gradient(120% 100% at 80% 0%, #3a4651 0%, #20272b 55%, #171c20 100%)" }}
-      />
-      <div aria-hidden className="absolute inset-0 -z-10" style={{ background: "linear-gradient(90deg,#171c20 8%,transparent 70%)" }} />
-
-      {/* nav */}
-      <Container className="relative flex h-20 items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 text-xl font-extrabold tracking-tight">
+    <header className="sticky top-0 z-30 border-b border-slate-100 bg-white/90 backdrop-blur">
+      <Container className="flex h-16 items-center justify-between">
+        <Link href="/" className="flex items-center gap-2 text-lg font-extrabold tracking-tight">
           <span aria-hidden className="text-2xl">🐟</span> FishySites
         </Link>
-        <nav className="hidden items-center gap-7 text-[13px] font-semibold uppercase tracking-wide text-white/85 lg:flex">
-          <a href="#how" className="hover:text-white">How it works</a>
-          <a href="#seo" className="hover:text-white">Web SEO</a>
-          <a href="#templates" className="hover:text-white">Websites</a>
-          <a href="#own" className="hover:text-white">Support</a>
+        <nav className="hidden items-center gap-8 text-xs font-bold uppercase tracking-wide text-slate-500 md:flex">
+          <a href="#how" className="hover:text-slate-900">How it works</a>
+          <a href="#seo" className="hover:text-slate-900">SEO</a>
+          <a href="#templates" className="hover:text-slate-900">Templates</a>
         </nav>
-        {loggedIn ? (
-          <Link href="/dashboard" className="rounded-sm px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white" style={{ backgroundColor: ORANGE }}>
-            Dashboard
-          </Link>
-        ) : (
-          <Link href="/login" className="rounded-sm border border-white/40 px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-white/10">
-            Log in
-          </Link>
-        )}
-      </Container>
-
-      {/* hero content */}
-      <Container className="relative grid items-end gap-10 pb-16 pt-24 lg:min-h-[460px] lg:grid-cols-2 lg:pt-32">
-        <div className="flex flex-col gap-6">
-          <h1 className="text-5xl font-extrabold uppercase leading-[0.92] tracking-tight sm:text-6xl lg:text-7xl" style={{ fontFamily: SAIRA }}>
-            Websites for{" "}
-            <span style={{ color: ORANGE }}>fishing guides</span>
-            <span className="block text-2xl font-bold text-white/70 sm:text-3xl">/ Charters &amp; Lodges</span>
-          </h1>
-          <div className="flex flex-col gap-3 sm:flex-row sm:gap-8">
-            <HeroBullet>Websites built to rank on Google and help you book more trips.</HeroBullet>
-            <HeroBullet>Flat pricing for guides and charters. Custom quotes for lodges and marinas.</HeroBullet>
-          </div>
-          <div>
-            <Link
-              href={loggedIn ? "/dashboard" : "/signup"}
-              className="inline-block rounded-sm px-8 py-4 text-base font-bold uppercase tracking-wide text-white shadow-lg transition hover:brightness-95"
-              style={{ backgroundColor: ORANGE }}
-            >
-              {loggedIn ? "Go to dashboard" : "Get started"}
+        <div className="flex items-center gap-2">
+          {loggedIn ? (
+            <Link href="/dashboard" className="rounded-sm px-4 py-2 text-sm font-bold uppercase tracking-wide text-white" style={{ backgroundColor: ORANGE }}>
+              Dashboard
             </Link>
-          </div>
+          ) : (
+            <>
+              <Link href="/login" className="rounded-sm px-3 py-2 text-sm font-semibold text-slate-600 hover:text-slate-900">
+                Log in
+              </Link>
+              <Link href="/signup" className="rounded-sm px-5 py-2 text-sm font-bold uppercase tracking-wide text-white shadow-sm transition hover:brightness-95" style={{ backgroundColor: ORANGE }}>
+                Get started
+              </Link>
+            </>
+          )}
         </div>
       </Container>
-    </section>
+    </header>
   );
 }
 
-function HeroBullet({ children }: { children: ReactNode }) {
+// ────────────────────────────────────────────────────────────────── hero ──
+function Hero({ loggedIn }: { loggedIn: boolean }) {
   return (
-    <p className="flex max-w-xs items-start gap-2 text-sm leading-snug text-white/85">
-      <span aria-hidden className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full text-[11px] font-bold text-white" style={{ backgroundColor: ORANGE }}>✓</span>
-      {children}
-    </p>
-  );
-}
+    <section className="relative overflow-hidden" style={{ background: `linear-gradient(180deg,${WARM} 0%,#ffffff 65%)` }}>
+      <Container className="grid items-center gap-12 py-20 lg:grid-cols-2 lg:py-28">
+        <div className="flex flex-col gap-6">
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-bold uppercase tracking-wide text-slate-600">
+            <span className="size-1.5 rounded-full" style={{ backgroundColor: ORANGE }} />
+            For fishing guides, charters &amp; lodges
+          </span>
+          <h1 className="text-5xl font-extrabold uppercase leading-[0.92] tracking-tight sm:text-6xl lg:text-7xl" style={{ fontFamily: SAIRA }}>
+            Websites that rank on Google and{" "}
+            <span style={{ color: ORANGE }}>book more trips</span>
+          </h1>
+          <p className="max-w-xl text-lg leading-relaxed text-slate-600">
+            Answer a few questions about your charter and get a complete website —
+            pages, copy, and real SEO — generated in minutes. Then it&apos;s yours to
+            edit and own. No retainers, no upsells.
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href={loggedIn ? "/dashboard" : "/signup"}
+              className="rounded-sm px-7 py-3.5 text-base font-bold uppercase tracking-wide text-white shadow-sm transition hover:brightness-95"
+              style={{ backgroundColor: ORANGE }}
+            >
+              {loggedIn ? "Go to dashboard" : "Start building your site"}
+            </Link>
+            <a href="#how" className="rounded-sm border border-slate-300 px-7 py-3.5 text-base font-bold uppercase tracking-wide text-slate-700 transition hover:bg-slate-50">
+              See how it works
+            </a>
+          </div>
+          <p className="text-sm text-slate-500">Built on real keyword research — never guesses.</p>
+        </div>
 
-// ─────────────────────────────────────────────────── "we build fishy sites" ──
-function FishyDudes() {
-  return (
-    <section style={{ backgroundColor: WARM }}>
-      <Container className="grid items-center gap-8 py-16 lg:grid-cols-[1.6fr_1fr]">
-        <h2 className="text-4xl font-extrabold uppercase leading-[0.95] tracking-tight sm:text-5xl" style={{ fontFamily: SAIRA }}>
-          We build fishy sites<br />for fishy dudes
-        </h2>
-        <p className="text-sm italic leading-relaxed text-[#5b5f5a]">
-          “Fishy anglers have an aura about them, some indescribable swagger, with an innate
-          ability to catch fish.” — every guide, probably
-        </p>
+        <SitePreview />
       </Container>
     </section>
   );
 }
 
-// ──────────────────────────────────────────────────────────────── marquee ──
-function Marquee() {
-  const items = ["Mobile Performance", "SEO", "Conversions"];
-  const row = Array.from({ length: 6 }).flatMap(() => items);
+/** A stylized browser mockup of a generated charter site (no real screenshot needed). */
+function SitePreview() {
+  return (
+    <div className="relative mx-auto w-full max-w-md">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10">
+        <div className="flex items-center gap-1.5 border-b border-slate-100 bg-slate-50 px-4 py-3">
+          <span className="size-2.5 rounded-full bg-slate-300" />
+          <span className="size-2.5 rounded-full bg-slate-300" />
+          <span className="size-2.5 rounded-full bg-slate-300" />
+          <span className="ml-3 truncate rounded bg-white px-2 py-0.5 text-[10px] text-slate-400">yourcharter.com</span>
+        </div>
+        <div className="relative p-6 text-white" style={{ background: "linear-gradient(135deg,#202514,#2a311b)" }}>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: "#f1c045" }}>
+            Guided fly fishing trips
+          </p>
+          <p className="mt-2 text-2xl font-bold uppercase leading-none" style={{ fontFamily: SAIRA }}>
+            South Holston<br />River Guides
+          </p>
+          <span className="mt-4 inline-block rounded-sm px-3 py-1.5 text-xs font-bold uppercase" style={{ backgroundColor: "#f1c045", color: "#202514" }}>
+            Book a trip
+          </span>
+        </div>
+        <div className="space-y-3 p-6">
+          <div className="h-3 w-2/3 rounded bg-slate-200" />
+          <div className="h-2.5 w-full rounded bg-slate-100" />
+          <div className="h-2.5 w-5/6 rounded bg-slate-100" />
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            <div className="aspect-square rounded-lg bg-slate-100" />
+            <div className="aspect-square rounded-lg bg-slate-100" />
+            <div className="aspect-square rounded-lg bg-slate-100" />
+          </div>
+        </div>
+      </div>
+      <div className="absolute -bottom-4 -right-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm shadow-lg">
+        <span className="font-extrabold" style={{ color: ORANGE }}>Ranked #1</span>{" "}
+        <span className="text-slate-500">“fly fishing guide”</span>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────── trust strip ──
+function TrustStrip() {
+  const items = ["No retainers", "No upsells", "You own your site", "SEO researched, not guessed"];
+  const row = Array.from({ length: 4 }).flatMap(() => items);
   return (
     <div className="overflow-hidden" style={{ backgroundColor: ORANGE }}>
-      <div className="flex items-center gap-6 whitespace-nowrap py-3 text-base font-bold uppercase tracking-wide text-white" style={{ fontFamily: SAIRA }}>
+      <div className="flex items-center gap-6 whitespace-nowrap py-3 text-sm font-bold uppercase tracking-wide text-white" style={{ fontFamily: SAIRA }}>
         {row.map((it, i) => (
-          <span key={i} className="flex items-center gap-6">
-            {it}
-            <span aria-hidden className="text-white/70">◆</span>
-          </span>
+          <span key={i} className="flex items-center gap-6">{it}<span aria-hidden className="text-white/70">◆</span></span>
         ))}
       </div>
     </div>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────── cards ──
-function Cards() {
-  const cards = [
-    { tag: "Flat rate $1,500", grad: "linear-gradient(135deg,#2c3a2a,#0f1a12)", title: "For Guides & Charters", points: ["SEO-optimized to help you rank on Google", "Booking integration included", "No ongoing monthly subscriptions"] },
-    { tag: "Custom quote", grad: "linear-gradient(135deg,#26414b,#10222a)", title: "For Lodges & Marinas", points: ["Custom quotes based on size and scope", "Structure built for your program and activities", "Online booking and CRM integration"] },
-    { tag: "$39.99 / month", grad: "linear-gradient(135deg,#3a3326,#1c160e)", title: "Optional Hosting", points: ["Easy-to-use support system", "Fast, secure, managed hosting", "Content updates handled for you"] },
+// ─────────────────────────────────────────────────────────────── pillars ──
+function Pillars() {
+  const items = [
+    { icon: <SearchIcon />, title: "Designed to rank", body: "Real keyword research, schema markup, and dedicated species & location pages — the queries anglers actually search." },
+    { icon: <BoltIcon />, title: "Built to convert", body: "Fast, mobile-first layouts with your phone number, booking links, recent catches, and reviews where they count." },
+    { icon: <KeyIcon />, title: "Done for you, owned by you", body: "We write the content and the SEO; you edit anything in a click. The site is yours — no contracts, no lock-in." },
   ];
   return (
-    <section style={{ backgroundColor: WARM }}>
-      <Container className="grid gap-6 py-16 md:grid-cols-3">
-        {cards.map((c) => (
-          <div key={c.title} className="overflow-hidden rounded-md bg-white shadow-sm">
-            <div className="relative h-36" style={{ background: c.grad }}>
-              <span className="absolute bottom-3 left-3 rounded-sm px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-white" style={{ backgroundColor: ORANGE }}>
-                {c.tag}
-              </span>
+    <Section>
+      <div className="grid gap-6 md:grid-cols-3">
+        {items.map((it) => (
+          <div key={it.title} className="rounded-lg border border-slate-200 bg-white p-7">
+            <div className="grid size-11 place-items-center rounded-lg text-white" style={{ backgroundColor: ORANGE }}>
+              {it.icon}
             </div>
-            <div className="p-6">
-              <h3 className="text-xl font-extrabold uppercase tracking-tight" style={{ fontFamily: SAIRA }}>{c.title}</h3>
-              <ul className="mt-4 flex flex-col gap-3 text-sm text-[#444]">
-                {c.points.map((p) => (
-                  <li key={p} className="flex items-start gap-2.5">
-                    <Bullet />
-                    {p}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <h3 className="mt-5 text-xl font-extrabold uppercase tracking-tight" style={{ fontFamily: SAIRA }}>{it.title}</h3>
+            <p className="mt-2 leading-relaxed text-slate-600">{it.body}</p>
           </div>
         ))}
-      </Container>
-    </section>
+      </div>
+    </Section>
+  );
+}
+
+// ─────────────────────────────────────────────────────────── how it works ──
+function HowItWorks() {
+  const steps = [
+    { n: "1", title: "Tell us about your charter", body: "A few quick questions — where you fish, your trips, target species, what makes you different." },
+    { n: "2", title: "We research your keywords", body: "Real search data — volume and difficulty — for your water and species. Never guesses." },
+    { n: "3", title: "We generate your site", body: "Every page written for your business: home, trips, species, location, about, FAQ — with the SEO built in." },
+    { n: "4", title: "Pick a design & publish", body: "Compare your site across professional templates, tweak anything, and go live. You own it." },
+  ];
+  return (
+    <Section id="how" tint>
+      <Heading kicker="How it works" title="From zero to a site that ranks — in minutes" />
+      <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {steps.map((s) => (
+          <div key={s.n} className="rounded-lg border border-slate-200 bg-white p-6">
+            <span className="grid size-10 place-items-center rounded-full text-base font-extrabold text-white" style={{ backgroundColor: ORANGE, fontFamily: SAIRA }}>
+              {s.n}
+            </span>
+            <h3 className="mt-4 text-lg font-extrabold uppercase tracking-tight" style={{ fontFamily: SAIRA }}>{s.title}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">{s.body}</p>
+          </div>
+        ))}
+      </div>
+    </Section>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────── seo ──
 function SeoSection() {
   const points = [
-    "Keyword targeting for your local market",
-    "Advanced schema markup",
-    "Fast-loading pages and mobile-first design",
-    "Optimized titles, descriptions, and alt tags",
-    "Internal link structure for future service pages",
+    "Real keyword research behind every page — search volume and difficulty, not assumptions",
+    "Dedicated species and location pages that capture how anglers actually search",
+    "Schema markup, clean metadata, and a sitemap generated automatically",
+    "Fast, mobile-first builds that load quickly on the dock",
   ];
   return (
-    <section id="seo" className="bg-white">
-      <Container className="grid items-start gap-12 py-20 lg:grid-cols-2">
+    <Section id="seo">
+      <div className="grid items-center gap-12 lg:grid-cols-2">
         <div>
-          <h2 className="max-w-md text-4xl font-extrabold uppercase leading-[0.95] tracking-tight sm:text-5xl" style={{ fontFamily: SAIRA }}>
-            SEO-optimized websites for fishing guides &amp; charters
-          </h2>
-          <p className="mt-6 text-sm font-bold uppercase tracking-wide" style={{ color: ORANGE }}>Our SEO setup includes</p>
-          <ul className="mt-4 flex flex-col gap-3 text-[15px] text-[#444]">
+          <Heading kicker="Designed to rank" title="SEO that's researched, not guessed" align="left" />
+          <ul className="mt-8 flex flex-col gap-4">
             {points.map((p) => (
-              <li key={p} className="flex items-start gap-2.5"><Bullet />{p}</li>
+              <li key={p} className="flex gap-3">
+                <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full text-white" style={{ backgroundColor: ORANGE }}><CheckIcon /></span>
+                <span className="leading-relaxed text-slate-700">{p}</span>
+              </li>
             ))}
           </ul>
-          <a href="#templates" className="mt-7 inline-block rounded-sm px-6 py-3 text-sm font-bold uppercase tracking-wide text-white" style={{ backgroundColor: DARK }}>
-            Our websites
-          </a>
         </div>
-        <div className="flex flex-col gap-6">
-          <p className="text-[15px] leading-relaxed text-[#555]">
-            Every site we build is structured to perform on Google. We follow Google&apos;s
-            best practices — proper heading hierarchy, optimized metadata, and keyword-rich
-            copy that reads naturally. Every keyword decision rests on real research, not
-            assumptions.
-          </p>
-          {/* stat mockup */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-400">
-              <SearchIcon /> south holston fishing guide
-            </div>
-            <div className="mt-4 flex items-end justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-slate-400">People reached</p>
-                <p className="text-3xl font-extrabold" style={{ fontFamily: SAIRA }}>12,239</p>
-              </div>
-              <svg viewBox="0 0 120 40" className="h-12 w-32" aria-hidden>
-                <polyline points="0,34 20,28 40,30 60,18 80,20 100,8 120,4" fill="none" stroke={ORANGE} strokeWidth="3" />
-              </svg>
-            </div>
+        <figure className="rounded-xl border border-slate-200 p-8" style={{ backgroundColor: WARM }}>
+          <blockquote className="text-2xl font-extrabold uppercase leading-snug tracking-tight" style={{ fontFamily: SAIRA }}>
+            “The goal is a site that ranks on its own — because it&apos;s built right.”
+          </blockquote>
+          <figcaption className="mt-4 text-sm font-medium text-slate-500">
+            Every keyword decision rests on real Ahrefs data. If we can&apos;t research it, we don&apos;t guess it.
+          </figcaption>
+        </figure>
+      </div>
+    </Section>
+  );
+}
+
+// ───────────────────────────────────────────────────────────── templates ──
+function Templates() {
+  return (
+    <Section id="templates" tint>
+      <Heading kicker="Templates" title="Professional designs, ready for your photos" />
+      <p className="mx-auto mt-3 max-w-2xl text-center text-slate-600">
+        Pick a look and see your content in it instantly. Switch anytime — your words stay put.
+      </p>
+      <div className="mt-12 grid gap-6 sm:grid-cols-2">
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <div className="p-8 text-white" style={{ background: "linear-gradient(135deg,#0e7c6b,#0b2540)" }}>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/70">Bright &amp; coastal</p>
+            <p className="mt-2 text-3xl font-extrabold uppercase tracking-tight" style={{ fontFamily: SAIRA }}>Coastal</p>
+            <span className="mt-5 inline-block rounded-sm bg-white/90 px-3 py-1.5 text-xs font-bold uppercase text-slate-900">Book now</span>
           </div>
+          <div className="p-5 text-sm text-slate-600">Photo-forward and friendly — great for inshore &amp; nearshore charters.</div>
         </div>
-      </Container>
-    </section>
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <div className="p-8 text-white" style={{ background: "linear-gradient(135deg,#202514,#2a311b)" }}>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: "#f1c045" }}>Dark &amp; rugged</p>
+            <p className="mt-2 text-3xl font-extrabold uppercase tracking-tight" style={{ fontFamily: SAIRA }}>Holston River</p>
+            <span className="mt-5 inline-block rounded-sm px-3 py-1.5 text-xs font-bold uppercase" style={{ backgroundColor: "#f1c045", color: "#202514" }}>Book a trip</span>
+          </div>
+          <div className="p-5 text-sm text-slate-600">Earthy and bold — built for fly fishing guides and lodges.</div>
+        </div>
+      </div>
+      <p className="mt-6 text-center text-sm text-slate-500">More designs on the way.</p>
+    </Section>
   );
 }
 
-// ────────────────────────────────────────────────────────── orange callout ──
-function OrangeCallout() {
+// ───────────────────────────────────────────────────────────── ownership ──
+function Ownership() {
   return (
-    <section style={{ backgroundColor: ORANGE }}>
-      <Container className="flex flex-col items-center gap-5 py-16 text-center text-white">
-        <p className="text-xs font-bold uppercase tracking-[0.25em] text-white/80">You don&apos;t need a monthly SEO plan</p>
-        <h2 className="max-w-3xl text-3xl font-extrabold uppercase leading-tight tracking-tight sm:text-4xl" style={{ fontFamily: SAIRA }}>
-          Our goal is to build a site that ranks on its own because it&apos;s built right.
-        </h2>
-        <Link href="/signup" className="rounded-sm px-7 py-3 text-sm font-bold uppercase tracking-wide text-white" style={{ backgroundColor: DARK }}>
-          Get started
-        </Link>
-      </Container>
-    </section>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────── hosting ──
-function Hosting() {
-  const includes = [
-    { icon: <BackupIcon />, label: "Daily automated backups" },
-    { icon: <ShieldIcon />, label: "SSL certificate & security" },
-    { icon: <PlugIcon />, label: "Maintenance & updates" },
-    { icon: <SupportIcon />, label: "Priority support" },
-  ];
-  return (
-    <section className="bg-white">
-      <Container className="grid items-start gap-10 pt-20 lg:grid-cols-2">
-        <h2 className="text-4xl font-extrabold uppercase leading-[0.95] tracking-tight sm:text-5xl" style={{ fontFamily: SAIRA }}>
-          Hosting that keeps you online
-        </h2>
-        <p className="text-[15px] leading-relaxed text-[#555]">
-          Fully managed hosting from $39.99/month — speed, security, and peace of mind.
-          Backups, SSL, and updates handled, so you can focus on the water. You own the
-          site completely.
+    <Section>
+      <div className="rounded-2xl px-8 py-12 text-center sm:px-16" style={{ backgroundColor: WARM }}>
+        <h2 className="text-4xl font-extrabold uppercase tracking-tight" style={{ fontFamily: SAIRA }}>You own it. Completely.</h2>
+        <p className="mx-auto mt-3 max-w-2xl text-lg text-slate-600">
+          No contracts, no restrictions, no marketing agency chasing retainers. Flat
+          pricing for guides and charters; custom quotes for lodges and marinas.
         </p>
-      </Container>
-      <Container className="grid grid-cols-2 gap-6 py-12 md:grid-cols-4">
-        {includes.map((it) => (
-          <div key={it.label} className="flex flex-col gap-3">
-            <span className="grid size-11 place-items-center rounded-lg text-white" style={{ backgroundColor: ORANGE }}>{it.icon}</span>
-            <span className="text-sm font-medium text-[#444]">{it.label}</span>
-          </div>
-        ))}
-      </Container>
-    </section>
-  );
-}
-
-// ────────────────────────────────────────────────────────────── own strip ──
-function OwnStrip() {
-  return (
-    <div id="own" className="overflow-hidden" style={{ backgroundColor: ORANGE }}>
-      <Container className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1 py-4 text-center text-base font-bold uppercase tracking-wide text-white" style={{ fontFamily: SAIRA }}>
-        <span>You own the site completely</span>
-        <span aria-hidden className="text-white/70">◆</span>
-        <span>No contracts, no restrictions</span>
-      </Container>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────── showcase ──
-function Showcase() {
-  return (
-    <section id="templates" className="relative isolate overflow-hidden" style={{ backgroundColor: DARK }}>
-      <div aria-hidden className="absolute inset-0 -z-10" style={{ background: "radial-gradient(120% 120% at 10% 50%, #2f3a44 0%, #20272b 60%)" }} />
-      <Container className="grid items-center gap-10 py-20 lg:grid-cols-[1.4fr_1fr]">
-        <div className="grid grid-cols-2 gap-4">
-          <MiniSite grad="linear-gradient(135deg,#0e7c6b,#0b2540)" kicker="Coastal" />
-          <MiniSite grad="linear-gradient(135deg,#202514,#2a311b)" kicker="Holston River" accent="#f1c045" />
-          <MiniSite grad="linear-gradient(135deg,#123a5a,#0b1f30)" kicker="Harbor" />
-          <MiniSite grad="linear-gradient(135deg,#2f5d34,#15240f)" kicker="Mangrove" />
-        </div>
-        <div className="text-white">
-          <h2 className="text-4xl font-extrabold uppercase leading-[0.95] tracking-tight sm:text-5xl" style={{ fontFamily: SAIRA }}>
-            Designed to rank.<br /><span style={{ color: ORANGE }}>Built to convert.</span>
-          </h2>
-          <p className="mt-5 max-w-sm text-white/75">
-            Pick a professional design and see your content in it instantly. Switch
-            anytime — your words stay put.
-          </p>
-        </div>
-      </Container>
-    </section>
-  );
-}
-
-function MiniSite({ grad, kicker, accent = "#ffffff" }: { grad: string; kicker: string; accent?: string }) {
-  return (
-    <div className="overflow-hidden rounded-md bg-white/95 shadow-xl">
-      <div className="p-4 text-white" style={{ background: grad }}>
-        <p className="text-[9px] font-bold uppercase tracking-[0.2em]" style={{ color: accent }}>{kicker}</p>
-        <p className="mt-1 text-sm font-extrabold uppercase" style={{ fontFamily: SAIRA }}>Charter Co.</p>
       </div>
-      <div className="space-y-1.5 p-3">
-        <div className="h-1.5 w-2/3 rounded bg-slate-200" />
-        <div className="h-1.5 w-full rounded bg-slate-100" />
-        <div className="h-1.5 w-5/6 rounded bg-slate-100" />
-      </div>
-    </div>
+    </Section>
   );
 }
 
-// ─────────────────────────────────────────────────────────── not an agency ──
-function NotAgency() {
-  return (
-    <section id="how" className="bg-white">
-      <Container className="grid items-center gap-12 py-20 lg:grid-cols-2">
-        <div>
-          <h2 className="text-4xl font-extrabold uppercase leading-[0.95] tracking-tight sm:text-5xl" style={{ fontFamily: SAIRA }}>
-            We&apos;re not a marketing agency chasing retainers
-          </h2>
-          <p className="mt-6 text-[15px] leading-relaxed text-[#555]">
-            FishySites builds fast, SEO-optimized fishing websites that rank and help fill
-            your calendar. Answer a few questions, we research your keywords and generate
-            your site, you pick a design and publish.
-          </p>
-          <p className="mt-4 font-bold text-[#20272b]">No retainers. No upsells. Just clean, effective sites that work.</p>
-        </div>
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-8">
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-slate-400">Bookings</p>
-              <p className="text-4xl font-extrabold" style={{ fontFamily: SAIRA }}>+38%</p>
-            </div>
-            <svg viewBox="0 0 120 50" className="h-16 w-40" aria-hidden>
-              <polyline points="0,44 24,40 48,30 72,32 96,16 120,6" fill="none" stroke={ORANGE} strokeWidth="3" />
-            </svg>
-          </div>
-          <p className="mt-4 text-sm text-slate-500">Built right, your site keeps working after launch — no monthly plan required.</p>
-        </div>
-      </Container>
-    </section>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────── final cta ──
+// ──────────────────────────────────────────────────────────── final cta ──
 function FinalCta({ loggedIn }: { loggedIn: boolean }) {
   return (
     <section style={{ backgroundColor: ORANGE }}>
-      <Container className="flex flex-col items-start gap-5 py-16 text-white">
-        <p className="text-xs font-bold uppercase tracking-[0.25em] text-white/80">Work with us</p>
+      <Container className="flex flex-col items-center gap-6 py-16 text-center text-white">
         <h2 className="max-w-2xl text-4xl font-extrabold uppercase leading-[0.95] tracking-tight sm:text-5xl" style={{ fontFamily: SAIRA }}>
           Ready to grow your guide or charter business?
         </h2>
         <p className="max-w-xl text-white/85">
-          Tell us a little about your charter, and we&apos;ll generate a site built to rank —
-          pages, copy, and SEO. No retainers, just clean sites that perform.
+          Build your site in minutes. Edit it whenever you want. Keep it forever.
         </p>
-        <Link href={loggedIn ? "/dashboard" : "/signup"} className="rounded-sm px-7 py-3.5 text-sm font-bold uppercase tracking-wide text-white" style={{ backgroundColor: DARK }}>
-          {loggedIn ? "Go to dashboard" : "Get started"}
+        <Link
+          href={loggedIn ? "/dashboard" : "/signup"}
+          className="rounded-sm px-7 py-3.5 text-sm font-bold uppercase tracking-wide text-white"
+          style={{ backgroundColor: DARK }}
+        >
+          {loggedIn ? "Go to dashboard" : "Start building your site"}
         </Link>
       </Container>
     </section>
@@ -402,61 +328,60 @@ function FinalCta({ loggedIn }: { loggedIn: boolean }) {
 // ─────────────────────────────────────────────────────────────── footer ──
 function Footer() {
   return (
-    <footer className="bg-white">
-      <Container className="grid gap-8 py-12 sm:grid-cols-3">
-        <div>
-          <Link href="/" className="flex items-center gap-2 text-lg font-extrabold tracking-tight">
-            <span aria-hidden className="text-xl">🐟</span> FishySites
-          </Link>
-          <p className="mt-3 max-w-xs text-sm text-slate-500">
-            Fast, SEO-optimized websites for fishing guides, charters, and lodges — designed
-            to rank on Google and book more trips.
-          </p>
-        </div>
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: ORANGE }}>Contact</p>
-          <ul className="mt-3 flex flex-col gap-2 text-sm text-slate-600">
-            <li><a href="mailto:info@fishysites.com" className="hover:text-slate-900">info@fishysites.com</a></li>
-          </ul>
-        </div>
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: ORANGE }}>Quick links</p>
-          <ul className="mt-3 flex flex-col gap-2 text-sm text-slate-600">
-            <li><a href="#how" className="hover:text-slate-900">How it works</a></li>
-            <li><a href="#seo" className="hover:text-slate-900">Web SEO</a></li>
-            <li><a href="#templates" className="hover:text-slate-900">Websites</a></li>
-            <li><Link href="/login" className="hover:text-slate-900">Log in</Link></li>
-          </ul>
-        </div>
+    <footer className="border-t border-slate-200 bg-white">
+      <Container className="flex flex-col items-center justify-between gap-6 py-10 sm:flex-row">
+        <Link href="/" className="flex items-center gap-2 font-extrabold tracking-tight">
+          <span aria-hidden className="text-xl">🐟</span> FishySites
+        </Link>
+        <nav className="flex flex-wrap items-center gap-6 text-sm text-slate-500">
+          <a href="#how" className="hover:text-slate-900">How it works</a>
+          <a href="#seo" className="hover:text-slate-900">SEO</a>
+          <a href="#templates" className="hover:text-slate-900">Templates</a>
+          <Link href="/login" className="hover:text-slate-900">Log in</Link>
+          <a href="mailto:info@fishysites.com" className="hover:text-slate-900">info@fishysites.com</a>
+        </nav>
       </Container>
-      <div className="border-t border-slate-100">
-        <Container className="py-5 text-center text-xs text-slate-400">© FishySites. Websites for fishing guides, charters &amp; lodges.</Container>
-      </div>
+      <Container className="border-t border-slate-100 py-6 text-center text-xs text-slate-400">
+        © FishySites. Websites for fishing guides, charters &amp; lodges.
+      </Container>
     </footer>
   );
 }
 
-// ── primitives + icons ───────────────────────────────────────────────────
-function Container({ children, className, style }: { children: ReactNode; className?: string; style?: CSSProperties }) {
-  return <div className={["mx-auto w-full max-w-6xl px-6", className ?? ""].join(" ")} style={style}>{children}</div>;
+// ── primitives ─────────────────────────────────────────────────────────────
+function Container({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={["mx-auto w-full max-w-6xl px-6", className ?? ""].join(" ")}>{children}</div>;
 }
 
-function Bullet() {
-  return <span aria-hidden className="mt-1.5 size-2 shrink-0 rounded-full" style={{ backgroundColor: ORANGE }} />;
+function Section({ children, id, tint }: { children: ReactNode; id?: string; tint?: boolean }) {
+  return (
+    <section id={id} style={tint ? { backgroundColor: WARM } : undefined} className={tint ? "" : "bg-white"}>
+      <Container className="py-20">{children}</Container>
+    </section>
+  );
 }
 
+function Heading({ kicker, title, align = "center" }: { kicker: string; title: string; align?: "center" | "left" }) {
+  return (
+    <div className={align === "center" ? "text-center" : "text-left"}>
+      <p className="text-sm font-bold uppercase tracking-[0.2em]" style={{ color: ORANGE }}>{kicker}</p>
+      <h2 className={["mt-2 text-4xl font-extrabold uppercase tracking-tight sm:text-5xl", align === "center" ? "mx-auto max-w-2xl" : ""].join(" ")} style={{ fontFamily: SAIRA }}>
+        {title}
+      </h2>
+    </div>
+  );
+}
+
+// ── icons ────────────────────────────────────────────────────────────────
 function SearchIcon() {
-  return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="size-4 text-slate-400" aria-hidden><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>);
+  return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="size-5" aria-hidden><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>);
 }
-function BackupIcon() {
-  return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-5" aria-hidden><path d="M21 12a9 9 0 1 1-3-6.7M21 4v4h-4" /></svg>);
+function BoltIcon() {
+  return (<svg viewBox="0 0 24 24" fill="currentColor" className="size-5" aria-hidden><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" /></svg>);
 }
-function ShieldIcon() {
-  return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-5" aria-hidden><path d="M12 3 5 6v6c0 4 3 6.5 7 9 4-2.5 7-5 7-9V6l-7-3Z" /><path d="m9 12 2 2 4-4" /></svg>);
+function KeyIcon() {
+  return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-5" aria-hidden><circle cx="7.5" cy="15.5" r="3.5" /><path d="m10 13 8-8 3 3M16 7l2 2" /></svg>);
 }
-function PlugIcon() {
-  return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-5" aria-hidden><path d="M12 22v-5M9 7V2M15 7V2M7 7h10v4a5 5 0 0 1-10 0V7Z" /></svg>);
-}
-function SupportIcon() {
-  return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-5" aria-hidden><circle cx="12" cy="12" r="9" /><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4M12 17h.01" /></svg>);
+function CheckIcon() {
+  return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="size-3.5" aria-hidden><path d="m20 6-11 11-5-5" /></svg>);
 }
