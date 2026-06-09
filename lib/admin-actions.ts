@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { setSiteSuspended } from "./store-db";
-import { setAnthropicKey, clearAnthropicKey } from "./settings";
+import { setAnthropicKey, clearAnthropicKey, setAhrefsKey, clearAhrefsKey } from "./settings";
 
 async function requireAdmin(): Promise<void> {
   const session = await auth();
@@ -32,6 +32,19 @@ export async function saveAnthropicKeyAction(formData: FormData): Promise<void> 
   } else {
     const key = String(formData.get("apiKey") ?? "").trim();
     if (key) await setAnthropicKey(key);
+  }
+  revalidatePath("/admin");
+}
+
+/** Admin-only: set or remove the platform Ahrefs API key (SEO keyword research). */
+export async function saveAhrefsKeyAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const intent = String(formData.get("intent") ?? "save");
+  if (intent === "remove") {
+    await clearAhrefsKey();
+  } else {
+    const key = String(formData.get("apiKey") ?? "").trim();
+    if (key) await setAhrefsKey(key);
   }
   revalidatePath("/admin");
 }

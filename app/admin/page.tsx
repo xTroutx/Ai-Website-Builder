@@ -1,14 +1,15 @@
 import { listAllSites, getPlatformCounts } from "@/lib/store-db";
-import { toggleSuspendAction, saveAnthropicKeyAction } from "@/lib/admin-actions";
-import { getAnthropicKeyStatus } from "@/lib/settings";
+import { toggleSuspendAction, saveAnthropicKeyAction, saveAhrefsKeyAction } from "@/lib/admin-actions";
+import { getAnthropicKeyStatus, getAhrefsKeyStatus } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const [counts, sites, aiStatus] = await Promise.all([
+  const [counts, sites, aiStatus, ahrefsStatus] = await Promise.all([
     getPlatformCounts(),
     listAllSites(),
     getAnthropicKeyStatus(),
+    getAhrefsKeyStatus(),
   ]);
 
   return (
@@ -72,6 +73,58 @@ export default async function AdminPage() {
         </form>
         {aiStatus.source === "admin" ? (
           <form action={saveAnthropicKeyAction} className="mt-2">
+            <input type="hidden" name="intent" value="remove" />
+            <button className="text-xs text-zinc-400 underline hover:text-zinc-200">
+              Remove stored key
+            </button>
+          </form>
+        ) : null}
+      </section>
+
+      {/* SEO research integration */}
+      <section className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-400">
+          SEO research (Ahrefs)
+        </h2>
+        <div className="mt-3 flex items-center gap-3">
+          <span
+            className={[
+              "inline-block size-2.5 rounded-full",
+              ahrefsStatus.connected ? "bg-emerald-400" : "bg-zinc-500",
+            ].join(" ")}
+          />
+          <span className="font-medium">
+            {ahrefsStatus.connected ? "Connected" : "Not configured"}
+          </span>
+          {ahrefsStatus.connected ? (
+            <span className="text-sm text-zinc-400">
+              Key ••••{ahrefsStatus.last4} ·{" "}
+              {ahrefsStatus.source === "admin" ? "set in admin" : "from environment"} ·
+              real keyword research at generation time
+            </span>
+          ) : (
+            <span className="text-sm text-zinc-400">
+              Paste your Ahrefs API key to enable real keyword research. Generation
+              halts rather than guessing when this is missing.
+            </span>
+          )}
+        </div>
+
+        <form action={saveAhrefsKeyAction} className="mt-4 flex flex-wrap items-center gap-2">
+          <input type="hidden" name="intent" value="save" />
+          <input
+            type="password"
+            name="apiKey"
+            autoComplete="off"
+            placeholder="Ahrefs API token"
+            className="w-72 max-w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-blue-500 focus:outline-none"
+          />
+          <button className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500">
+            Save key
+          </button>
+        </form>
+        {ahrefsStatus.source === "admin" ? (
+          <form action={saveAhrefsKeyAction} className="mt-2">
             <input type="hidden" name="intent" value="remove" />
             <button className="text-xs text-zinc-400 underline hover:text-zinc-200">
               Remove stored key

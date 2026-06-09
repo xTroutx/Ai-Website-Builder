@@ -67,6 +67,8 @@ model PlatformSettings {
   id              String   @id @default("global")
   /// AES-256-GCM encrypted Anthropic API key (never stored in plaintext).
   anthropicKeyEnc String?
+  /// AES-256-GCM encrypted Ahrefs API key (real SEO keyword research at generation time).
+  ahrefsKeyEnc    String?
   updatedAt       DateTime @updatedAt
 }
 
