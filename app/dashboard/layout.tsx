@@ -24,7 +24,7 @@ export default function DashboardLayout({
             <NavLink href="/editor">Editor</NavLink>
             <NavLink href="/dashboard/account">Account</NavLink>
             <a
-              href="/"
+              href="/preview"
               target="_blank"
               rel="noopener noreferrer"
               className="rounded px-3 py-1.5 text-zinc-600 hover:bg-zinc-100"

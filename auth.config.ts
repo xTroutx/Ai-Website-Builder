@@ -15,6 +15,7 @@ export const authConfig = {
     authorized({ auth, request }) {
       const { pathname } = request.nextUrl;
       const isPublic =
+        pathname === "/" || // public marketing landing page
         pathname.startsWith("/login") ||
         pathname.startsWith("/signup") ||
         pathname.startsWith("/api/auth") ||
